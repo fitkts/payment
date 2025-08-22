@@ -1,0 +1,8 @@
+{
+  "name": "Copy of Copy of 피트니스 AI 애널리틱스 대시보드",
+  "description": "피트니스 센터 직원의 급여를 계산하고, 회원의 수업 통계를 관리하며, Gemini API를 사용하여 비즈니스 성과에 대한 AI 기반 분석을 제공하는 통합 웹 애플리케E이션입니다.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "prompt": ""
+}
