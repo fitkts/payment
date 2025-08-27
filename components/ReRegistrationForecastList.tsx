@@ -6,7 +6,7 @@ import PlusIcon from './icons/PlusIcon';
 interface ReRegistrationForecastListProps {
   members: TrackedMemberWithStats[];
   forecastEntries: ForecastEntry[];
-  onAddMemberToForecast: (memberName: string, classCount: number, unitPrice: number) => void;
+  onAddMemberToForecast: (memberName: string, classCount: number, amount: number) => void;
 }
 
 const ReRegistrationForecastList: React.FC<ReRegistrationForecastListProps> = ({
@@ -19,7 +19,9 @@ const ReRegistrationForecastList: React.FC<ReRegistrationForecastListProps> = ({
   }
 
   const handleAddClick = (member: TrackedMemberWithStats) => {
-    onAddMemberToForecast(member.name, member.totalSessions, member.unitPrice || 50000);
+    const unitPrice = member.unitPrice || 50000;
+    const amount = member.totalSessions * unitPrice;
+    onAddMemberToForecast(member.name, member.totalSessions, amount);
   };
 
   const addedMemberNames = new Set(forecastEntries.map(entry => entry.memberName));

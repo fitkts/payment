@@ -10,13 +10,13 @@ import { VAT_RATE } from '../constants';
 
 interface SalesForecastProps {
     currentMonthSales: SaleEntry[];
-    onAddSale: (memberId: string, classCount: number, unitPrice: number, saleDate: string) => void;
+    onAddSale: (memberId: string, classCount: number, amount: number, saleDate: string) => void;
     onDeleteSale: (id: string) => void;
-    onUpdateSale: (id: string, field: keyof Omit<SaleEntry, 'id' | 'memberId' | 'memberName' | 'amount'>, value: string | number) => void;
+    onUpdateSale: (id: string, field: 'saleDate' | 'classCount' | 'amount', value: string | number) => void;
     entries: ForecastEntry[];
     membersToReRegister: TrackedMemberWithStats[];
     trackedMembers: TrackedMember[];
-    onAddEntry: (memberName: string, classCount: number, unitPrice: number) => void;
+    onAddEntry: (memberName: string, classCount: number, amount: number) => void;
     onDeleteEntry: (id: string) => void;
     onUpdateEntry: (id: string, field: keyof ForecastEntry, value: string | number) => void;
 }
@@ -45,7 +45,7 @@ const SalesForecast: React.FC<SalesForecastProps> = ({
     const currentMonthSalesCount = currentMonthSales.length;
     const currentMonthTotalClasses = currentMonthSales.reduce((acc, sale) => acc + sale.classCount, 0);
 
-    const totalForecastRevenue = entries.reduce((acc, entry) => acc + (entry.classCount * entry.unitPrice), 0);
+    const totalForecastRevenue = entries.reduce((acc, entry) => acc + entry.amount, 0);
     const vatAmount = vatEnabled ? Math.floor(totalForecastRevenue * VAT_RATE) : 0;
     const totalWithVat = totalForecastRevenue + vatAmount;
 

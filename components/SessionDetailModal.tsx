@@ -1,5 +1,4 @@
-
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import type { MemberSession, ToastInfo } from '../types';
 import XMarkIcon from './icons/XMarkIcon';
 import TrashIcon from './icons/TrashIcon';
@@ -35,6 +34,48 @@ const getDayOfWeek = (dateString: string): string => {
 };
 
 const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose, memberName, memberId, sessions, onUpdateSession, onDeleteSession, onAddSession, onShowToast }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const modalNode = modalRef.current;
+    if (!modalNode) return;
+
+    const focusableElements = modalNode.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && focusableElements.length > 0) {
+        if (e.shiftKey) { // Shift+Tab
+          if (document.activeElement === firstElement) {
+            lastElement?.focus();
+            e.preventDefault();
+          }
+        } else { // Tab
+          if (document.activeElement === lastElement) {
+            firstElement?.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    
+    firstElement?.focus();
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, sessions]);
+
   if (!isOpen) return null;
 
   const expandedSessions: ExpandedSession[] = useMemo(() => {
@@ -94,6 +135,7 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col transform transition-all duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
@@ -113,12 +155,12 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-100">
                 <tr>
-                  <th scope="col" className="w-16 px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
-                  <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">수업일자</th>
-                  <th scope="col" className="w-16 px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">요일</th>
-                  <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">단가 (원)</th>
-                  <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">합계 (원)</th>
-                  <th scope="col" className="relative px-3 py-3">
+                  <th scope="col" className="w-16 px-3 py-2 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">수업일자</th>
+                  <th scope="col" className="w-16 px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">요일</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">단가 (원)</th>
+                  <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">합계 (원)</th>
+                  <th scope="col" className="relative px-3 py-2">
                     <span className="sr-only">삭제</span>
                   </th>
                 </tr>
@@ -126,32 +168,32 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
               <tbody className="bg-white divide-y divide-slate-200">
                 {expandedSessions.map((session, index) => (
                   <tr key={session.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-500 text-center font-medium">{index + 1}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-slate-500 text-center font-medium">{index + 1}</td>
+                    <td className="px-3 py-1.5 whitespace-nowrap">
                       <input
                         type="date"
                         value={session.sessionDate}
                         onChange={(e) => handleDateChange(session, e.target.value)}
-                        className="w-36 px-2 py-1 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800 text-sm"
+                        className="w-36 px-2 py-0.5 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800 text-sm"
                       />
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-700">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-slate-700">
                       {getDayOfWeek(session.sessionDate)}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-1.5 whitespace-nowrap">
                       <input
                         type="text"
                         inputMode="numeric"
                         value={formatCurrency(session.unitPrice)}
                         onChange={(e) => handlePriceChange(session, e.target.value)}
-                        className="w-28 px-2 py-1 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800 text-sm"
+                        className="w-28 px-2 py-0.5 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800 text-sm"
                         step="1000"
                       />
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-700 font-semibold">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-slate-700 font-semibold">
                       {(session.unitPrice).toLocaleString()} 원
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleDelete(session)}
                         className="text-red-600 hover:text-red-800 transition-colors p-1 rounded-full hover:bg-red-100"
@@ -165,12 +207,12 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
               </tbody>
               <tfoot className="bg-slate-100 border-t-2 border-slate-300">
                   <tr className="text-sm font-semibold text-slate-700">
-                      <td colSpan={3} className="px-3 py-3 text-center">합계</td>
-                      <td className="px-3 py-3 whitespace-nowrap">{totalClassCount} 회</td>
-                      <td className="px-3 py-3 whitespace-nowrap font-bold text-slate-800">
+                      <td colSpan={3} className="px-3 py-2 text-center">합계</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{totalClassCount} 회</td>
+                      <td className="px-3 py-2 whitespace-nowrap font-bold text-slate-800">
                           {totalRevenue.toLocaleString()} 원
                       </td>
-                      <td className="px-3 py-3"></td>
+                      <td className="px-3 py-2"></td>
                   </tr>
               </tfoot>
             </table>

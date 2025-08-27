@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import PlusIcon from './icons/PlusIcon';
 import CameraIcon from './icons/CameraIcon';
@@ -69,11 +70,11 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
 
     if (activeSale) {
         setUnitPrice(formatCurrency(activeSale.unitPrice));
-        setUnitPriceInfo(`※ ${activeSale.saleDate}에 등록된 세션에서 차감됩니다.`);
+        setUnitPriceInfo(`${activeSale.saleDate} 등록분`);
     } else {
         const latestSale = memberSalesSorted.length > 0 ? memberSalesSorted[memberSalesSorted.length - 1] : null;
         setUnitPrice(latestSale ? formatCurrency(latestSale.unitPrice) : '');
-        setUnitPriceInfo('※ 잔여 세션이 없습니다. 신규 매출을 먼저 등록해주세요.');
+        setUnitPriceInfo('잔여 세션 없음');
     }
   };
 
@@ -83,7 +84,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
       alert('모든 필드를 입력해주세요. 목록에서 회원을 선택해야 합니다.');
       return;
     }
-     if (unitPriceInfo && unitPriceInfo.includes('잔여 세션이 없습니다')) {
+     if (unitPriceInfo && unitPriceInfo.includes('잔여 세션 없음')) {
         alert('잔여 세션이 없는 회원은 세션을 추가할 수 없습니다. 매출 예상 탭에서 신규 매출을 먼저 등록해주세요.');
         return;
     }
@@ -107,7 +108,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
             type="date"
             value={sessionDate}
             onChange={(e) => setSessionDate(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-slate-200"
+            className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-slate-200"
             disabled={disabled}
           />
         </div>
@@ -134,15 +135,22 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
             value={classCount}
             onChange={(e) => setClassCount(e.target.value)}
             placeholder="예: 1"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-slate-200"
+            className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-slate-200"
             disabled={disabled}
             min="0"
           />
         </div>
         <div className="md:col-span-1">
-          <label htmlFor="unitPrice" className="block text-sm font-medium text-slate-600 mb-1">
-            단가 (원)
-          </label>
+          <div className="flex justify-between items-baseline mb-1">
+            <label htmlFor="unitPrice" className="block text-sm font-medium text-slate-600">
+              단가 (원)
+            </label>
+            {unitPriceInfo && (
+              <span className="text-xs font-medium text-red-600">
+                  {unitPriceInfo}
+              </span>
+            )}
+          </div>
           <input
             id="unitPrice"
             type="text"
@@ -150,14 +158,9 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
             value={unitPrice}
             readOnly
             placeholder="회원 선택 시 자동 입력"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none bg-slate-200 text-slate-500 cursor-not-allowed"
+            className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none bg-slate-200 text-slate-500 cursor-not-allowed"
             disabled={disabled}
           />
-          {unitPriceInfo && (
-            <p className={`text-xs mt-1 ${unitPriceInfo.includes('잔여 세션이 없습니다') ? 'text-red-600' : 'text-slate-500'}`}>
-                {unitPriceInfo}
-            </p>
-          )}
         </div>
         <div className="md:col-span-1">
            <label className="block text-sm font-medium text-slate-600 mb-1 invisible" aria-hidden="true">
@@ -167,7 +170,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
              <button
                 type="submit"
                 disabled={disabled}
-                className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors"
+                className="h-8 w-8 flex-shrink-0 flex items-center justify-center bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors"
                 aria-label="세션 추가"
                 title="세션 추가"
              >
@@ -177,7 +180,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
                 type="button"
                 onClick={onOpenCamera}
                 disabled={disabled}
-                className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-slate-700 text-white font-semibold rounded-md shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors"
+                className="h-8 w-8 flex-shrink-0 flex items-center justify-center bg-slate-700 text-white font-semibold rounded-md shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors"
                 aria-label="카메라로 스캔"
                 title="카메라로 스캔"
              >
@@ -187,7 +190,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
                 type="button"
                 onClick={onOpenUploadModal}
                 disabled={disabled}
-                className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-teal-600 text-white font-semibold rounded-md shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors"
+                className="h-8 w-8 flex-shrink-0 flex items-center justify-center bg-teal-600 text-white font-semibold rounded-md shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors"
                 aria-label="파일 업로드로 스캔"
                 title="파일 업로드로 스캔"
              >

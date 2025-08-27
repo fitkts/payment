@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { MemberSession } from '../types';
 import {
   NATIONAL_PENSION_RATE,
@@ -8,6 +8,8 @@ import {
   EMPLOYMENT_INSURANCE_RATE,
   TAX_RATE
 } from '../constants';
+import ChevronUpIcon from './icons/ChevronUpIcon';
+import ChevronDownIcon from './icons/ChevronDownIcon';
 
 interface SalarySummaryProps {
   sessions: MemberSession[];
@@ -36,6 +38,7 @@ const SalarySummary: React.FC<SalarySummaryProps> = ({
   monthlySales,
   salesIncentiveRate
 }) => {
+  const [isBreakdownVisible, setIsBreakdownVisible] = useState(false);
   const sessionRevenue = sessions.reduce((acc, session) => acc + session.classCount * session.unitPrice, 0);
   const sessionIncentive = Math.floor(sessionRevenue * (incentiveRate / 100));
   const salesIncentive = Math.floor(monthlySales * (salesIncentiveRate / 100));
@@ -62,28 +65,42 @@ const SalarySummary: React.FC<SalarySummaryProps> = ({
       <h2 className="text-xl font-bold text-slate-800 mb-4">급여 정산</h2>
       <div className="space-y-3">
         <div className="flex justify-between items-center text-lg">
-          <span className="font-medium text-slate-600">총 급여 (세전)</span>
+           <button
+            className="flex items-center gap-2 text-left"
+            onClick={() => setIsBreakdownVisible(p => !p)}
+            aria-expanded={isBreakdownVisible}
+            aria-controls="salary-breakdown"
+          >
+            <span className="font-medium text-slate-600">총 급여 (세전)</span>
+            {isBreakdownVisible ? <ChevronUpIcon className="w-4 h-4 text-slate-500" /> : <ChevronDownIcon className="w-4 h-4 text-slate-500" />}
+          </button>
           <span className="font-bold text-slate-800">{formatCurrency(totalSalary)}</span>
         </div>
         
-        <div className="pl-6 pr-2 pt-2 pb-1 space-y-1 text-sm bg-slate-200/50 rounded-md">
-          <div className="flex justify-between items-center text-slate-600">
-            <span>기본급</span>
-            <span>{formatCurrency(baseSalary)}</span>
-          </div>
-          <div className="flex justify-between items-center text-slate-600">
-            <span>수업 인센티브 ({incentiveRate}%)</span>
-            <span>+ {formatCurrency(sessionIncentive)}</span>
-          </div>
-          <div className="flex justify-between items-center text-slate-600">
-            <span>매출 인센티브 ({salesIncentiveRate}%)</span>
-            <span>+ {formatCurrency(salesIncentive)}</span>
-          </div>
-           <div className="flex justify-between items-center text-slate-600">
-            <span>성과급</span>
-            <span>+ {formatCurrency(performanceBonus)}</span>
+        <div
+          id="salary-breakdown"
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${isBreakdownVisible ? 'max-h-40' : 'max-h-0'}`}
+        >
+          <div className="pl-6 pr-2 pt-2 pb-1 space-y-1 text-sm bg-slate-200/50 rounded-md">
+            <div className="flex justify-between items-center text-slate-600">
+              <span>기본급</span>
+              <span>{formatCurrency(baseSalary)}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-600">
+              <span>수업 인센티브 ({incentiveRate}%)</span>
+              <span>+ {formatCurrency(sessionIncentive)}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-600">
+              <span>매출 인센티브 ({salesIncentiveRate}%)</span>
+              <span>+ {formatCurrency(salesIncentive)}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-600">
+              <span>성과급</span>
+              <span>+ {formatCurrency(performanceBonus)}</span>
+            </div>
           </div>
         </div>
+
 
         <div className="border-t border-slate-200 !mt-4 !mb-2"></div>
 

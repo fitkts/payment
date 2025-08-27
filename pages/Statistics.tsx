@@ -1,18 +1,14 @@
-
-
 import React, { useState } from 'react';
-import type { TrackedMemberWithStats, MemberStat, SalaryStatisticsData, DateRange, CalendarEvent } from '../types';
+import type { TrackedMemberWithStats, MemberStat, SalaryStatisticsData, DateRange, ViewType } from '../types';
 import ReRegistrationList from '../components/ReRegistrationList';
 import StatisticsSummary from '../components/StatisticsSummary';
 import LowEngagementList from '../components/LowEngagementList';
 import MemberRankingLists from '../components/MemberRankingLists';
 import SalaryStatistics from '../components/SalaryStatistics';
-import StatisticsFilter from '../components/StatisticsFilter';
+import DateFilterControl from '../components/DateFilterControl';
 import UserGroupIcon from '../components/icons/UserGroupIcon';
 import ChartPieIcon from '../components/icons/ChartPieIcon';
 import PersonalGrowthCharts from '../components/PersonalGrowthCharts';
-import Calendar from '../components/Calendar';
-import CalendarDaysIcon from '../components/icons/CalendarDaysIcon';
 
 interface StatisticsProps {
     stats: {
@@ -37,17 +33,16 @@ interface StatisticsProps {
     onDateRangeChange: (range: DateRange) => void;
     salaryDateRange: DateRange;
     onSalaryDateRangeChange: (range: DateRange) => void;
-    calendarEvents: CalendarEvent[];
 }
 
 type SubTab = 'member' | 'my';
 
-const Statistics: React.FC<StatisticsProps> = ({ stats, membersToReRegister, dateRange, onDateRangeChange, salaryDateRange, onSalaryDateRangeChange, calendarEvents }) => {
+const Statistics: React.FC<StatisticsProps> = ({ stats, membersToReRegister, dateRange, onDateRangeChange, salaryDateRange, onSalaryDateRangeChange }) => {
     
     const [activeSubTab, setActiveSubTab] = useState<SubTab>('member');
+    const [memberStatsView, setMemberStatsView] = useState<ViewType>('month');
+    const [salaryStatsView, setSalaryStatsView] = useState<ViewType>('month');
     
-    const periodString = `${dateRange.start.toLocaleDateString('ko-KR')} - ${dateRange.end.toLocaleDateString('ko-KR')}`;
-
     const getSubTabClass = (tabName: SubTab) => {
         return activeSubTab === tabName
           ? 'bg-blue-600 text-white'
@@ -86,27 +81,12 @@ const Statistics: React.FC<StatisticsProps> = ({ stats, membersToReRegister, dat
                             </div>
                         </div>
 
-                        <StatisticsFilter dateRange={dateRange} setDateRange={onDateRangeChange} />
-                        
-                        <div className="flex items-start space-x-4">
-                            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mt-1">
-                                <CalendarDaysIcon className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold text-slate-800">월간 이벤트 캘린더</h2>
-                                <p className="text-slate-600 mt-1">
-                                    선택된 기간의 주요 이벤트를 한 눈에 파악하세요.
-                                </p>
-                            </div>
-                        </div>
-                        <Calendar dateRange={dateRange} events={calendarEvents} />
-
-
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
-                            <p className="text-sm font-medium text-blue-700">
-                                분석 기간: <span className="font-bold">{periodString}</span>
-                            </p>
-                        </div>
+                        <DateFilterControl 
+                            dateRange={dateRange} 
+                            onDateRangeChange={onDateRangeChange}
+                            currentView={memberStatsView}
+                            onCurrentViewChange={setMemberStatsView}
+                         />
                         
                         <StatisticsSummary stats={stats} />
                         <MemberRankingLists stats={stats} />
@@ -140,7 +120,12 @@ const Statistics: React.FC<StatisticsProps> = ({ stats, membersToReRegister, dat
                             </p>
                         </div>
                     </div>
-                    <StatisticsFilter dateRange={salaryDateRange} setDateRange={onSalaryDateRangeChange} />
+                    <DateFilterControl 
+                        dateRange={salaryDateRange} 
+                        onDateRangeChange={onSalaryDateRangeChange}
+                        currentView={salaryStatsView}
+                        onCurrentViewChange={setSalaryStatsView}
+                    />
                     <PersonalGrowthCharts salaryStats={stats.salaryStatisticsData} />
                     <SalaryStatistics salaryStats={stats.salaryStatisticsData} />
                 </section>

@@ -26,7 +26,7 @@ const SalaryConfigForm: React.FC<SalaryConfigFormProps> = ({
   setSalesIncentiveRate,
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
       <div>
         <label htmlFor="baseSalary" className="block text-sm font-medium text-slate-600 mb-1">
           기본급 (원)
@@ -38,7 +38,7 @@ const SalaryConfigForm: React.FC<SalaryConfigFormProps> = ({
           value={formatCurrency(baseSalary)}
           onChange={(e) => setBaseSalary(parseCurrency(e.target.value))}
           placeholder="예: 2,100,000"
-          className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-100"
+          className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
         />
       </div>
       <div>
@@ -51,7 +51,7 @@ const SalaryConfigForm: React.FC<SalaryConfigFormProps> = ({
           value={incentiveRate}
           onChange={(e) => setIncentiveRate(parseInt(e.target.value, 10) || 0)}
           placeholder="예: 50"
-          className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-100"
+          className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
           min="0"
           max="100"
         />
@@ -67,7 +67,7 @@ const SalaryConfigForm: React.FC<SalaryConfigFormProps> = ({
           value={formatCurrency(performanceBonus)}
           onChange={(e) => setPerformanceBonus(parseCurrency(e.target.value))}
           placeholder="예: 300,000"
-          className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-100"
+          className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
         />
       </div>
       <div>
@@ -79,7 +79,7 @@ const SalaryConfigForm: React.FC<SalaryConfigFormProps> = ({
           type="text"
           value={monthlySales.toLocaleString()}
           readOnly
-          className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none bg-slate-200 text-slate-500 cursor-not-allowed"
+          className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none bg-slate-200 text-slate-500 cursor-not-allowed"
         />
       </div>
       <div>
@@ -92,7 +92,7 @@ const SalaryConfigForm: React.FC<SalaryConfigFormProps> = ({
           value={salesIncentiveRate}
           onChange={(e) => setSalesIncentiveRate(parseInt(e.target.value, 10) || 0)}
           placeholder="예: 10"
-          className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-100"
+          className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
           min="0"
           max="100"
         />

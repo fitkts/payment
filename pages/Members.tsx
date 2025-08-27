@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { TrackedMemberWithStats, SaleEntry, MemberSession } from '../types';
 import AddTrackedMemberForm from '../components/AddTrackedMemberForm';
@@ -11,12 +12,13 @@ interface MembersProps {
     onUpdateMember: (id: string, data: { name: string; totalSessions: number; unitPrice: number; }) => void;
     sales: SaleEntry[];
     sessions: MemberSession[];
-    onAddSale: (memberId: string, classCount: number, unitPrice: number, saleDate: string) => void;
+    onAddSale: (memberId: string, classCount: number, amount: number, saleDate: string) => void;
     onDeleteSale: (id: string) => void;
-    onUpdateSale: (id: string, field: keyof Omit<SaleEntry, 'id' | 'memberId' | 'memberName' | 'amount'>, value: string | number) => void;
+    onUpdateSale: (id: string, field: 'saleDate' | 'classCount' | 'amount', value: string | number) => void;
+    onAddScheduleClick: (memberId: string) => void;
 }
 
-const Members: React.FC<MembersProps> = ({ members, onAddMember, onDeleteMember, onUpdateMember, sales, sessions, onAddSale, onDeleteSale, onUpdateSale }) => {
+const Members: React.FC<MembersProps> = ({ members, onAddMember, onDeleteMember, onUpdateMember, sales, sessions, onAddSale, onDeleteSale, onUpdateSale, onAddScheduleClick }) => {
     const [selectedMember, setSelectedMember] = useState<TrackedMemberWithStats | null>(null);
 
     const handleMemberClick = (member: TrackedMemberWithStats) => {
@@ -26,6 +28,12 @@ const Members: React.FC<MembersProps> = ({ members, onAddMember, onDeleteMember,
     const handleCloseModal = () => {
         setSelectedMember(null);
     };
+
+    const handleAddScheduleAndCloseDetail = (memberId: string) => {
+        onAddScheduleClick(memberId);
+        handleCloseModal();
+    };
+
 
     return (
         <>
@@ -59,6 +67,7 @@ const Members: React.FC<MembersProps> = ({ members, onAddMember, onDeleteMember,
                     onAddSale={onAddSale}
                     onDeleteSale={onDeleteSale}
                     onUpdateSale={onUpdateSale}
+                    onAddScheduleClick={handleAddScheduleAndCloseDetail}
                 />
             )}
         </>

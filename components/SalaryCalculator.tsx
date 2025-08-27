@@ -12,6 +12,9 @@ import SessionDetailModal from './SessionDetailModal';
 import CameraScanModal from './CameraScanModal';
 import FileUploadModal from './FileUploadModal';
 import CogIcon from './icons/CogIcon';
+import ChevronUpIcon from './icons/ChevronUpIcon';
+import ChevronDownIcon from './icons/ChevronDownIcon';
+import { formatCurrency } from '../utils';
 
 interface SalaryCalculatorProps {
   sessions: MemberSession[];
@@ -62,6 +65,8 @@ const SalaryCalculator: React.FC<SalaryCalculatorProps> = ({
     const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<{id: string; name: string} | null>(null);
     const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
     const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
+    const [isConfigExpanded, setIsConfigExpanded] = useState(false);
+
 
     const handleViewDetails = (memberId: string, memberName: string) => {
         setSelectedMemberForDetails({ id: memberId, name: memberName });
@@ -120,8 +125,8 @@ const SalaryCalculator: React.FC<SalaryCalculatorProps> = ({
     return (
       <>
         <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200">
-          <div className="mb-8">
-              <label className="block text-lg font-bold text-slate-700 mb-2">
+           <div className="flex flex-wrap items-center justify-between gap-4 mb-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <label className="text-lg font-bold text-slate-700">
                   정산 연월 선택 (지급 기준)
               </label>
               <MonthYearPicker
@@ -131,29 +136,58 @@ const SalaryCalculator: React.FC<SalaryCalculatorProps> = ({
           </div>
 
           <div className="mb-6">
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-xl font-semibold text-slate-700">급여 조건 설정</h2>
-              <button
-                onClick={onOpenSettings}
-                className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-slate-100"
-                aria-label="기본값 설정"
-                title="기본값 설정"
-              >
-                <CogIcon className="w-5 h-5" />
-                <span>설정</span>
-              </button>
+            <div className="border border-slate-200 rounded-lg">
+                <div
+                    className="flex justify-between items-center bg-slate-50 p-4 rounded-t-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                    onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsConfigExpanded(!isConfigExpanded); }}
+                    tabIndex={0}
+                    role="button"
+                    aria-expanded={isConfigExpanded}
+                    aria-controls="salary-config-form"
+                >
+                    <div>
+                        <h2 className="text-xl font-semibold text-slate-700">급여 조건 설정</h2>
+                        {!isConfigExpanded && (
+                        <p className="text-sm text-slate-500 mt-1 hidden sm:block">
+                            기본급: {formatCurrency(baseSalary)}, 수업 인센티브: {incentiveRate}%, 매출 인센티브: {salesIncentiveRate}%
+                        </p>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                        onClick={(e) => { e.stopPropagation(); onOpenSettings(); }}
+                        className="p-2 rounded-full text-slate-600 hover:bg-slate-200 focus-visible:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        aria-label="기본값 설정"
+                        title="기본값 설정"
+                        >
+                        <CogIcon className="w-5 h-5" />
+                        </button>
+                        <span className="p-1">
+                        {isConfigExpanded ? <ChevronUpIcon className="w-5 h-5 text-slate-600" /> : <ChevronDownIcon className="w-5 h-5 text-slate-600" />}
+                        </span>
+                    </div>
+                </div>
+
+                <div
+                    id="salary-config-form"
+                    className={`transition-[max-height,padding] duration-500 ease-in-out overflow-hidden ${isConfigExpanded ? 'max-h-96' : 'max-h-0'}`}
+                >
+                    <div className={`bg-slate-50 p-4 border-t border-slate-200 ${!isConfigExpanded ? 'hidden' : ''}`}>
+                        <SalaryConfigForm
+                            baseSalary={baseSalary}
+                            setBaseSalary={setBaseSalary}
+                            incentiveRate={incentiveRate}
+                            setIncentiveRate={setIncentiveRate}
+                            performanceBonus={performanceBonus}
+                            setPerformanceBonus={setPerformanceBonus}
+                            monthlySales={workMonthSalesTotal}
+                            salesIncentiveRate={salesIncentiveRate}
+                            setSalesIncentiveRate={setSalesIncentiveRate}
+                        />
+                    </div>
+                </div>
             </div>
-            <SalaryConfigForm
-              baseSalary={baseSalary}
-              setBaseSalary={setBaseSalary}
-              incentiveRate={incentiveRate}
-              setIncentiveRate={setIncentiveRate}
-              performanceBonus={performanceBonus}
-              setPerformanceBonus={setPerformanceBonus}
-              monthlySales={workMonthSalesTotal}
-              salesIncentiveRate={salesIncentiveRate}
-              setSalesIncentiveRate={setSalesIncentiveRate}
-            />
           </div>
           
           <AddSessionForm 

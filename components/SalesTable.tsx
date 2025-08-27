@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import type { SaleEntry } from '../types';
 import TrashIcon from './icons/TrashIcon';
@@ -10,7 +11,7 @@ import ChevronUpDownIcon from './icons/ChevronUpDownIcon';
 interface SalesTableProps {
   sales: SaleEntry[];
   onDeleteSale: (id: string) => void;
-  onUpdateSale: (id: string, field: keyof Omit<SaleEntry, 'id' | 'memberId' | 'memberName' | 'amount'>, value: string | number) => void;
+  onUpdateSale: (id: string, field: 'saleDate' | 'classCount' | 'amount', value: string | number) => void;
 }
 
 type SortKeys = keyof SaleEntry;
@@ -105,33 +106,33 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, onDeleteSale, onUpdateSa
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-100">
           <tr>
-            <th scope="col" className="w-16 px-3 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th scope="col" className="w-16 px-3 py-2 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
+            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <button onClick={(e) => requestSort('saleDate', e)} className="flex items-center">
                 매출 일자{getSortIndicator('saleDate')}
               </button>
             </th>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <button onClick={(e) => requestSort('memberName', e)} className="flex items-center">
                 회원명{getSortIndicator('memberName')}
               </button>
             </th>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <button onClick={(e) => requestSort('classCount', e)} className="flex items-center">
                 수업 수{getSortIndicator('classCount')}
               </button>
             </th>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
-              <button onClick={(e) => requestSort('unitPrice', e)} className="flex items-center">
-                단가 (원){getSortIndicator('unitPrice')}
-              </button>
-            </th>
-            <th scope="col" className="px-3 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <button onClick={(e) => requestSort('amount', e)} className="flex items-center">
                 금액 (원){getSortIndicator('amount')}
               </button>
             </th>
-            <th scope="col" className="relative px-3 py-3">
+            <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <button onClick={(e) => requestSort('unitPrice', e)} className="flex items-center">
+                단가 (원){getSortIndicator('unitPrice')}
+              </button>
+            </th>
+            <th scope="col" className="relative px-3 py-2">
               <span className="sr-only">삭제</span>
             </th>
           </tr>
@@ -139,39 +140,38 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, onDeleteSale, onUpdateSa
         <tbody className="bg-white divide-y divide-slate-200">
           {sortedSales.map((sale, index) => (
             <tr key={sale.id} className="hover:bg-slate-50 transition-colors">
-               <td className="px-3 py-4 whitespace-nowrap text-sm text-center font-medium text-slate-500">{index + 1}</td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm text-slate-700">
+               <td className="px-3 py-2 whitespace-nowrap text-sm text-center font-medium text-slate-500">{index + 1}</td>
+              <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-700">
                  <input
                   type="date"
                   value={sale.saleDate}
                   onChange={(e) => onUpdateSale(sale.id, 'saleDate', e.target.value)}
-                  className="w-36 px-2 py-1 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
+                  className="w-36 px-2 py-0.5 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
                 />
               </td>
-              <td className="px-3 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{sale.memberName}</td>
-              <td className="px-3 py-4 whitespace-nowrap">
+              <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-slate-900">{sale.memberName}</td>
+              <td className="px-3 py-2 whitespace-nowrap">
                 <input
                   type="number"
                   value={sale.classCount}
                   onChange={(e) => onUpdateSale(sale.id, 'classCount', parseInt(e.target.value) || 0)}
-                  className="w-20 px-2 py-1 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
+                  className="w-20 px-2 py-0.5 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
                   min="0"
                 />
               </td>
-              <td className="px-3 py-4 whitespace-nowrap">
+              <td className="px-3 py-2 whitespace-nowrap">
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={formatCurrency(sale.unitPrice)}
-                  onChange={(e) => onUpdateSale(sale.id, 'unitPrice', parseCurrency(e.target.value))}
-                  className="w-28 px-2 py-1 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
-                  step="1000"
+                  value={formatCurrency(sale.amount)}
+                  onChange={(e) => onUpdateSale(sale.id, 'amount', parseCurrency(e.target.value))}
+                  className="w-28 px-2 py-0.5 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
                 />
               </td>
-               <td className="px-3 py-4 whitespace-nowrap text-sm text-slate-700 font-semibold">
-                {sale.amount.toLocaleString()} 원
+              <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-700 font-semibold">
+                {(sale.classCount > 0 ? Math.floor(sale.amount / sale.classCount) : 0).toLocaleString()} 원
               </td>
-              <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
                 <button
                   onClick={() => onDeleteSale(sale.id)}
                   className="text-red-600 hover:text-red-800 transition-colors p-1 rounded-full hover:bg-red-100"
@@ -185,11 +185,11 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales, onDeleteSale, onUpdateSa
         </tbody>
         <tfoot className="bg-slate-100 border-t-2 border-slate-300">
           <tr className="text-sm font-semibold text-slate-700">
-            <td colSpan={5} className="px-3 py-3 text-right">합계</td>
-            <td className="px-3 py-3 whitespace-nowrap font-bold text-slate-800">
+            <td colSpan={4} className="px-3 py-2 text-right">합계</td>
+            <td className="px-3 py-2 whitespace-nowrap font-bold text-slate-800">
               {totalRevenue.toLocaleString()} 원
             </td>
-            <td className="px-3 py-3"></td>
+            <td colSpan={2} className="px-3 py-2"></td>
           </tr>
         </tfoot>
       </table>

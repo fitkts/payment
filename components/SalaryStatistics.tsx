@@ -277,25 +277,25 @@ const SalaryStatistics: React.FC<{ salaryStats: SalaryStatisticsData }> = ({ sal
                                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                                     <thead className="bg-slate-100">
                                         <tr>
-                                            <th scope="col" className="px-4 py-3 text-left font-bold text-slate-600 uppercase tracking-wider">
+                                            <th scope="col" className="px-4 py-2 text-left font-bold text-slate-600 uppercase tracking-wider">
                                                 <button onClick={(e) => requestSort('period', e)} className="flex items-center">기간{getSortIndicator('period')}</button>
                                             </th>
-                                            <th scope="col" className="px-4 py-3 text-right font-bold text-slate-600 uppercase tracking-wider">
+                                            <th scope="col" className="px-4 py-2 text-right font-bold text-slate-600 uppercase tracking-wider">
                                                 <button onClick={(e) => requestSort('totalSalary', e)} className="flex items-center w-full justify-end">세전 총급여{getSortIndicator('totalSalary')}</button>
                                             </th>
-                                            <th scope="col" className="px-4 py-3 text-right font-bold text-slate-600 uppercase tracking-wider">
+                                            <th scope="col" className="px-4 py-2 text-right font-bold text-slate-600 uppercase tracking-wider">
                                                 <button onClick={(e) => requestSort('baseSalary', e)} className="flex items-center w-full justify-end">기본급{getSortIndicator('baseSalary')}</button>
                                             </th>
-                                            <th scope="col" className="px-4 py-3 text-right font-bold text-slate-600 uppercase tracking-wider">
+                                            <th scope="col" className="px-4 py-2 text-right font-bold text-slate-600 uppercase tracking-wider">
                                                 <button onClick={(e) => requestSort('sessionIncentive', e)} className="flex items-center w-full justify-end">수업 인센티브{getSortIndicator('sessionIncentive')}</button>
                                             </th>
-                                            <th scope="col" className="px-4 py-3 text-right font-bold text-slate-600 uppercase tracking-wider">
+                                            <th scope="col" className="px-4 py-2 text-right font-bold text-slate-600 uppercase tracking-wider">
                                                 <button onClick={(e) => requestSort('salesIncentive', e)} className="flex items-center w-full justify-end">매출 인센티브{getSortIndicator('salesIncentive')}</button>
                                             </th>
-                                            <th scope="col" className="px-4 py-3 text-right font-bold text-slate-600 uppercase tracking-wider">
+                                            <th scope="col" className="px-4 py-2 text-right font-bold text-slate-600 uppercase tracking-wider">
                                                 <button onClick={(e) => requestSort('totalDeduction', e)} className="flex items-center w-full justify-end">총 공제액{getSortIndicator('totalDeduction')}</button>
                                             </th>
-                                            <th scope="col" className="px-4 py-3 text-right font-bold text-slate-600 uppercase tracking-wider">
+                                            <th scope="col" className="px-4 py-2 text-right font-bold text-slate-600 uppercase tracking-wider">
                                                 <button onClick={(e) => requestSort('finalSalary', e)} className="flex items-center w-full justify-end">최종 지급액{getSortIndicator('finalSalary')}</button>
                                             </th>
                                         </tr>
@@ -303,25 +303,25 @@ const SalaryStatistics: React.FC<{ salaryStats: SalaryStatisticsData }> = ({ sal
                                     <tbody className="bg-white divide-y divide-slate-200">
                                         {paginatedData.map((item) => (
                                             <tr key={item.period} className="hover:bg-slate-50">
-                                                <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-800">{item.period}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-right text-slate-700">{formatCurrency(item.totalSalary)}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-right text-slate-600">{formatCurrency(item.baseSalary)}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-right text-slate-600">{formatCurrency(item.sessionIncentive)}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-right text-slate-600">{formatCurrency(item.salesIncentive)}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-right text-red-600">-{formatCurrency(item.totalDeduction)}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-right font-bold text-blue-700">{formatCurrency(item.finalSalary)}</td>
+                                                <td className="px-4 py-2 whitespace-nowrap font-medium text-slate-800">{item.period}</td>
+                                                <td className="px-4 py-2 whitespace-nowrap text-right text-slate-700">{formatCurrency(item.totalSalary)}</td>
+                                                <td className="px-4 py-2 whitespace-nowrap text-right text-slate-600">{formatCurrency(item.baseSalary)}</td>
+                                                <td className="px-4 py-2 whitespace-nowrap text-right text-slate-600">{formatCurrency(item.sessionIncentive)}</td>
+                                                <td className="px-4 py-2 whitespace-nowrap text-right text-slate-600">{formatCurrency(item.salesIncentive)}</td>
+                                                <td className="px-4 py-2 whitespace-nowrap text-right text-red-600">-{formatCurrency(item.totalDeduction)}</td>
+                                                <td className="px-4 py-2 whitespace-nowrap text-right font-bold text-blue-700">{formatCurrency(item.finalSalary)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot className="bg-slate-100 border-t-2 border-slate-300">
                                         <tr className="font-bold text-slate-800">
-                                            <td className="px-4 py-3 whitespace-nowrap text-left">합계</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-right">{formatCurrency(totals.totalSalary)}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-right">{formatCurrency(totals.baseSalary)}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-right">{formatCurrency(totals.sessionIncentive)}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-right">{formatCurrency(totals.salesIncentive)}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-right text-red-700">-{formatCurrency(totals.totalDeduction)}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-right text-blue-800">{formatCurrency(totals.finalSalary)}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-left">합계</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-right">{formatCurrency(totals.totalSalary)}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-right">{formatCurrency(totals.baseSalary)}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-right">{formatCurrency(totals.sessionIncentive)}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-right">{formatCurrency(totals.salesIncentive)}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-right text-red-700">-{formatCurrency(totals.totalDeduction)}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-right text-blue-800">{formatCurrency(totals.finalSalary)}</td>
                                         </tr>
                                     </tfoot>
                                 </table>

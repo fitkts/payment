@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import type { MemberSession } from '../types';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
@@ -102,6 +103,8 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, onViewDetails }) 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
     const [sortConfig, setSortConfig] = useState<SortConfigItem[]>([{ key: 'totalRevenue', direction: 'descending' }]);
+    const [focusedRowIndex, setFocusedRowIndex] = useState(-1);
+    const tableContainerRef = useRef<HTMLDivElement>(null);
 
     const memberSummaries: MemberSessionSummary[] = useMemo(() => {
         const summaryMap = new Map<string, { memberName: string; totalClassCount: number; totalRevenue: number; }>();
@@ -115,8 +118,8 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, onViewDetails }) 
                 });
             }
             const current = summaryMap.get(session.memberId)!;
-            current.totalClassCount += Number(session.classCount) || 0;
-            current.totalRevenue += (Number(session.classCount) || 0) * (Number(session.unitPrice) || 0);
+            current.totalClassCount += session.classCount || 0;
+            current.totalRevenue += (session.classCount || 0) * (session.unitPrice || 0);
         });
 
         return Array.from(summaryMap.entries()).map(([memberId, data]) => ({
@@ -231,6 +234,24 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, onViewDetails }) 
         pageSize: itemsPerPage,
         siblingCount: 1,
     });
+    
+    useEffect(() => {
+      setFocusedRowIndex(-1);
+    }, [paginatedSummaries]);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setFocusedRowIndex(prev => Math.min(prev + 1, paginatedSummaries.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setFocusedRowIndex(prev => Math.max(prev - 1, 0));
+        } else if (e.key === 'Enter' && focusedRowIndex > -1) {
+            e.preventDefault();
+            const summary = paginatedSummaries[focusedRowIndex];
+            onViewDetails(summary.memberId, summary.memberName);
+        }
+    };
 
 
   if (sessions.length === 0) {
@@ -253,54 +274,66 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, onViewDetails }) 
 
 
   return (
-    <div>
+    <div 
+        ref={tableContainerRef} 
+        onKeyDown={handleKeyDown} 
+        tabIndex={0} 
+        className="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
+        aria-label="세션 요약 테이블. 화살표 키로 탐색하고 Enter 키로 상세 정보를 확인하세요."
+    >
       <div className="overflow-x-auto bg-white rounded-lg shadow border border-slate-200">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-100">
             <tr>
-              <th scope="col" className="w-16 px-6 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <th scope="col" className="w-16 px-6 py-2 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
+              <th scope="col" className="px-6 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                 <button onClick={(e) => requestSort('memberName', e)} className="flex items-center">
                     회원명
                     {getSortIndicator('memberName')}
                 </button>
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                 <button onClick={(e) => requestSort('totalClassCount', e)} className="flex items-center">
                     총 수업 수
                     {getSortIndicator('totalClassCount')}
                 </button>
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                 <button onClick={(e) => requestSort('averageUnitPrice', e)} className="flex items-center">
                     평균 단가 (원)
                     {getSortIndicator('averageUnitPrice')}
                 </button>
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                 <button onClick={(e) => requestSort('totalRevenue', e)} className="flex items-center">
                     합계 (원)
                     {getSortIndicator('totalRevenue')}
                 </button>
               </th>
-              <th scope="col" className="relative px-6 py-3">
+              <th scope="col" className="relative px-6 py-2">
                 <span className="sr-only">상세보기</span>
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
             {paginatedSummaries.map((summary, index) => (
-              <tr key={summary.memberId} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-center font-medium text-slate-500">
+              <tr 
+                key={summary.memberId} 
+                className={`transition-colors ${focusedRowIndex === index ? 'bg-blue-100 ring-2 ring-blue-500 ring-inset' : 'hover:bg-slate-50'}`}
+                onMouseEnter={() => setFocusedRowIndex(index)}
+                onMouseLeave={() => setFocusedRowIndex(-1)}
+                onClick={() => onViewDetails(summary.memberId, summary.memberName)}
+              >
+                <td className="px-6 py-2 whitespace-nowrap text-sm text-center font-medium text-slate-500">
                   {isAllSelected ? index + 1 : startIndex + index + 1}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{summary.memberName}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{summary.totalClassCount} 회</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{summary.averageUnitPrice.toLocaleString()} 원</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 font-semibold">
+                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-slate-900">{summary.memberName}</td>
+                <td className="px-6 py-2 whitespace-nowrap text-sm text-slate-700">{summary.totalClassCount} 회</td>
+                <td className="px-6 py-2 whitespace-nowrap text-sm text-slate-700">{summary.averageUnitPrice.toLocaleString()} 원</td>
+                <td className="px-6 py-2 whitespace-nowrap text-sm text-slate-700 font-semibold">
                   {summary.totalRevenue.toLocaleString()} 원
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
                   <button 
                     onClick={() => onViewDetails(summary.memberId, summary.memberName)} 
                     className="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
@@ -314,16 +347,16 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, onViewDetails }) 
           </tbody>
           <tfoot className="bg-slate-100 border-t-2 border-slate-300">
               <tr className="text-sm font-semibold text-slate-700">
-                  <td colSpan={2} className="px-6 py-3 text-center">합계</td>
-                  <td className="px-6 py-3 whitespace-nowrap">
+                  <td colSpan={2} className="px-6 py-2 text-center">합계</td>
+                  <td className="px-6 py-2 whitespace-nowrap">
                       <div>총 {totalClassCount} 회</div>
                       <div className="text-xs text-slate-500 font-normal">일 평균 {dailyAverageClassCount.toFixed(1)} 회</div>
                   </td>
-                  <td className="px-6 py-3"></td>
-                  <td className="px-6 py-3 whitespace-nowrap font-bold text-slate-800">
+                  <td className="px-6 py-2"></td>
+                  <td className="px-6 py-2 whitespace-nowrap font-bold text-slate-800">
                       {totalRevenue.toLocaleString()} 원
                   </td>
-                  <td className="px-6 py-3"></td>
+                  <td className="px-6 py-2"></td>
               </tr>
           </tfoot>
         </table>

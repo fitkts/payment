@@ -130,7 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ membersWithUsage, forecastEntries
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         placeholder="AI에게 질문할 내용을 입력하세요..."
-                        className="w-full p-3 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
+                        className="w-full p-2 text-sm border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
                         rows={3}
                     />
                 </div>

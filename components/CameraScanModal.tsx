@@ -21,6 +21,7 @@ const CameraScanModal: React.FC<CameraScanModalProps> = ({ isOpen, onClose, onAd
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const startCamera = async () => {
     try {
@@ -54,6 +55,46 @@ const CameraScanModal: React.FC<CameraScanModalProps> = ({ isOpen, onClose, onAd
     }
     return () => stopCamera();
   }, [isOpen]);
+  
+   useEffect(() => {
+    if (!isOpen) return;
+
+    const modalNode = modalRef.current;
+    if (!modalNode) return;
+
+    const focusableElements = modalNode.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && focusableElements.length > 0) {
+        if (e.shiftKey) { 
+          if (document.activeElement === firstElement) {
+            lastElement?.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            firstElement?.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    
+    setTimeout(() => firstElement?.focus(), 100);
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, step]);
   
   const handleTakePhoto = () => {
     if (videoRef.current && canvasRef.current) {
@@ -194,7 +235,7 @@ const CameraScanModal: React.FC<CameraScanModalProps> = ({ isOpen, onClose, onAd
         return (
             <div>
                 <h3 className="text-lg font-semibold text-slate-800 mb-2">분석 결과 확인</h3>
-                <p className="text-sm text-slate-600 mb-4">등록된 회원과 이름이 일치하는 항목만 추가할 수 있습니다. 추가할 세션을 선택해주세요.</p>
+                <p className="text-sm text-slate-600 mb-4">등록된 회원과 이름가 일치하는 항목만 추가할 수 있습니다. 추가할 세션을 선택해주세요.</p>
                 <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-lg">
                     <table className="min-w-full divide-y divide-slate-200 text-sm">
                         <thead className="bg-slate-100 sticky top-0">
@@ -261,6 +302,7 @@ const CameraScanModal: React.FC<CameraScanModalProps> = ({ isOpen, onClose, onAd
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col transform transition-all duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >

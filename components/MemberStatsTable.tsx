@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { TrackedMemberWithStats } from '../types';
 import TrashIcon from './icons/TrashIcon';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
@@ -87,6 +87,8 @@ const MemberStatsTable: React.FC<MemberStatsTableProps> = ({ members, onDeleteMe
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<SortConfigItem[]>([{ key: 'ltv', direction: 'descending' }]);
+  const [focusedRowIndex, setFocusedRowIndex] = useState(-1);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const membersForSort: SortableMember[] = useMemo(() => {
     return members.map(member => ({
@@ -190,6 +192,23 @@ const MemberStatsTable: React.FC<MemberStatsTableProps> = ({ members, onDeleteMe
       return sortedMembers.slice(startIndex, startIndex + itemsPerPage);
   }, [sortedMembers, currentPage, itemsPerPage, isAllSelected]);
   
+  useEffect(() => {
+    setFocusedRowIndex(-1);
+  }, [paginatedMembers]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedRowIndex(prev => Math.min(prev + 1, paginatedMembers.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedRowIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && focusedRowIndex > -1) {
+      e.preventDefault();
+      onMemberClick(paginatedMembers[focusedRowIndex]);
+    }
+  };
+  
   const startIndex = (currentPage - 1) * itemsPerPage;
 
   const paginationRange = usePagination({
@@ -209,37 +228,43 @@ const MemberStatsTable: React.FC<MemberStatsTableProps> = ({ members, onDeleteMe
   }
 
   return (
-    <div>
+    <div 
+        ref={tableContainerRef} 
+        onKeyDown={handleKeyDown} 
+        tabIndex={0} 
+        className="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
+        aria-label="회원 목록 테이블. 화살표 키로 탐색하고 Enter 키로 상세 정보를 확인하세요."
+    >
         <div className="overflow-x-auto bg-white rounded-lg shadow border border-slate-200">
             <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-100">
                 <tr>
-                    <th scope="col" className="w-16 px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    <th scope="col" className="w-16 px-4 py-2 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
+                    <th scope="col" className="px-4 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                         <button onClick={(e) => requestSort('name', e)} className="flex items-center">
                             회원명
                             {getSortIndicator('name')}
                         </button>
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                         <button onClick={(e) => requestSort('ltv', e)} className="flex items-center">
                             총 누적 매출 (LTV)
                             {getSortIndicator('ltv')}
                         </button>
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    <th scope="col" className="px-4 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                         <button onClick={(e) => requestSort('remainingSessions', e)} className="flex items-center">
                             잔여/누적 횟수
                             {getSortIndicator('remainingSessions')}
                         </button>
                     </th>
-                    <th scope="col" className="w-[220px] px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    <th scope="col" className="w-[220px] px-4 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
                         <button onClick={(e) => requestSort('progress', e)} className="flex items-center">
                             진행률
                             {getSortIndicator('progress')}
                         </button>
                     </th>
-                    <th scope="col" className="relative px-4 py-3">
+                    <th scope="col" className="relative px-4 py-2">
                     <span className="sr-only">삭제</span>
                     </th>
                 </tr>
@@ -262,18 +287,20 @@ const MemberStatsTable: React.FC<MemberStatsTableProps> = ({ members, onDeleteMe
                     return (
                     <tr 
                         key={member.id} 
-                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                        className={`cursor-pointer transition-colors ${focusedRowIndex === index ? 'bg-blue-100 ring-2 ring-blue-500 ring-inset' : 'hover:bg-slate-50'}`}
                         onClick={() => onMemberClick(member)}
+                        onMouseEnter={() => setFocusedRowIndex(index)}
+                        onMouseLeave={() => setFocusedRowIndex(-1)}
                     >
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-center font-medium text-slate-500">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-center font-medium text-slate-500">
                             {isAllSelected ? index + 1 : startIndex + index + 1}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{member.name}</td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">{member.ltv.toLocaleString()} 원</td>
-                        <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${member.remainingSessions < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-slate-900">{member.name}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-semibold text-slate-700">{member.ltv.toLocaleString()} 원</td>
+                        <td className={`px-4 py-2 whitespace-nowrap text-sm font-medium ${member.remainingSessions < 0 ? 'text-red-600' : 'text-blue-600'}`}>
                             {member.remainingSessions} / {member.cumulativeTotalSessions}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap">
                         <div className="flex items-center">
                             <div className="w-full bg-slate-200 rounded-full h-2.5">
                             <div 
@@ -284,7 +311,7 @@ const MemberStatsTable: React.FC<MemberStatsTableProps> = ({ members, onDeleteMe
                             <span className={`ml-3 text-sm font-medium ${progressTextColorClass}`}>{Math.round(member.progress)}%</span>
                         </div>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation(); // Prevent modal from opening when deleting

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import PlusIcon from './icons/PlusIcon';
 import { formatCurrency, parseCurrency } from '../utils';
@@ -10,20 +9,20 @@ interface AddTrackedMemberFormProps {
 const AddTrackedMemberForm: React.FC<AddTrackedMemberFormProps> = ({ onAddMember }) => {
   const [name, setName] = useState('');
   const [totalSessions, setTotalSessions] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
+  const [amount, setAmount] = useState('');
 
-  const amount = (parseInt(totalSessions, 10) || 0) * (parseCurrency(unitPrice));
+  const unitPrice = (parseInt(totalSessions, 10) || 0) > 0 ? Math.floor(parseCurrency(amount) / parseInt(totalSessions, 10)) : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !totalSessions || !unitPrice) {
+    if (!name || !totalSessions || !amount) {
       alert('모든 필드를 입력해주세요.');
       return;
     }
-    onAddMember(name, parseInt(totalSessions, 10), parseCurrency(unitPrice));
+    onAddMember(name, parseInt(totalSessions, 10), unitPrice);
     setName('');
     setTotalSessions('');
-    setUnitPrice('');
+    setAmount('');
   };
 
   return (
@@ -40,7 +39,7 @@ const AddTrackedMemberForm: React.FC<AddTrackedMemberFormProps> = ({ onAddMember
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="예: 오건강"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
           />
         </div>
         <div className="col-span-1">
@@ -53,40 +52,40 @@ const AddTrackedMemberForm: React.FC<AddTrackedMemberFormProps> = ({ onAddMember
             value={totalSessions}
             onChange={(e) => setTotalSessions(e.target.value)}
             placeholder="예: 30"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             min="0"
           />
         </div>
         <div className="col-span-1">
-          <label htmlFor="unitPriceMember" className="block text-sm font-medium text-slate-600 mb-1">
-            단가 (원)
-          </label>
-          <input
-            id="unitPriceMember"
-            type="text"
-            inputMode="numeric"
-            value={unitPrice}
-            onChange={(e) => setUnitPrice(formatCurrency(e.target.value))}
-            placeholder="예: 50,000"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-          />
-        </div>
-        <div className="col-span-1">
           <label htmlFor="amountMember" className="block text-sm font-medium text-slate-600 mb-1">
-            금액 (자동)
+            총 금액 (원)
           </label>
           <input
             id="amountMember"
             type="text"
-            value={formatCurrency(amount)}
+            inputMode="numeric"
+            value={amount}
+            onChange={(e) => setAmount(formatCurrency(e.target.value))}
+            placeholder="예: 1,500,000"
+            className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+          />
+        </div>
+        <div className="col-span-1">
+          <label htmlFor="unitPriceMember" className="block text-sm font-medium text-slate-600 mb-1">
+            단가 (자동)
+          </label>
+          <input
+            id="unitPriceMember"
+            type="text"
+            value={formatCurrency(unitPrice)}
             readOnly
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none bg-slate-200 text-slate-500 cursor-not-allowed"
+            className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none bg-slate-200 text-slate-500 cursor-not-allowed"
           />
         </div>
         <div className="col-span-1">
           <button
             type="submit"
-            className="w-full flex items-center justify-center bg-blue-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="w-full flex items-center justify-center bg-blue-600 text-white font-semibold py-1 px-4 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             <PlusIcon className="w-5 h-5 mr-2" />
             등록하기

@@ -7,6 +7,7 @@ export interface MemberSession {
   memberName: string;
   classCount: number;
   unitPrice: number;
+  completionSourceId?: string; // ID of the CalendarEvent that generated this session
 }
 
 export interface ForecastEntry {
@@ -14,6 +15,7 @@ export interface ForecastEntry {
   memberName: string;
   classCount: number;
   unitPrice: number;
+  amount: number;
 }
 
 export interface TrackedMember {
@@ -28,6 +30,7 @@ export interface TrackedMemberWithStats extends TrackedMember {
   ltv: number;
   lastSessionDate?: string;
   cumulativeTotalSessions: number;
+  scheduledSessions: number;
 }
 
 export interface SaleEntry {
@@ -89,11 +92,20 @@ export interface ScannedSession {
   selected: boolean;
 }
 
-export type CalendarEventType = 'new_member' | 'sale' | 'refund' | 'consultation';
+export type CalendarEventType = 'new_member' | 'sale' | 'refund' | 'consultation' | 'workout';
 
 export interface CalendarEvent {
+  id: string;
   date: string; // YYYY-MM-DD
   type: CalendarEventType;
-  description: string;
-  amount?: number;
+  title: string;
+  startTime: string; // e.g., '14:00'
+  endTime: string; // e.g., '15:00'
+  memberId: string;
+  recurrenceId?: string;
+  status?: 'scheduled' | 'completed' | 'cancelled'; // Only for 'workout' type
 }
+
+
+export type ViewType = 'month' | 'week' | 'day' | 'custom';
+export type EditMode = 'single' | 'future' | 'all';

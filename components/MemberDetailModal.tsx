@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,6 +13,7 @@ import { formatCurrency, parseCurrency } from '../utils';
 import ChevronUpIcon from './icons/ChevronUpIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChevronUpDownIcon from './icons/ChevronUpDownIcon';
+import CalendarPlusIcon from './icons/CalendarPlusIcon';
 
 
 interface MemberDetailModalProps {
@@ -20,19 +22,21 @@ interface MemberDetailModalProps {
   allSessions: MemberSession[];
   onClose: () => void;
   onUpdateMember: (id: string, data: { name: string; totalSessions: number; unitPrice: number; }) => void;
-  onAddSale: (memberId: string, classCount: number, unitPrice: number, saleDate: string) => void;
+  onAddSale: (memberId: string, classCount: number, amount: number, saleDate: string) => void;
   onDeleteSale: (id: string) => void;
-  onUpdateSale: (id: string, field: keyof Omit<SaleEntry, 'id' | 'memberId' | 'memberName' | 'amount'>, value: string | number) => void;
+  onUpdateSale: (id: string, field: 'saleDate' | 'classCount' | 'amount', value: string | number) => void;
+  onAddScheduleClick: (memberId: string) => void;
 }
 
 type SaleSortKeys = keyof SaleEntry;
 type SortConfigItem = { key: SaleSortKeys; direction: 'ascending' | 'descending' };
 
-const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales, allSessions, onClose, onUpdateMember, onAddSale, onDeleteSale, onUpdateSale }) => {
+const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales, allSessions, onClose, onUpdateMember, onAddSale, onDeleteSale, onUpdateSale, onAddScheduleClick }) => {
   const [loading, setLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState('');
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
   
   const [editedData, setEditedData] = useState({
       name: member.name,
@@ -43,7 +47,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
   const [newSaleData, setNewSaleData] = useState({
       saleDate: new Date().toISOString().split('T')[0],
       classCount: '',
-      unitPrice: ''
+      amount: ''
   });
   
   const [sortConfig, setSortConfig] = useState<SortConfigItem[]>([{ key: 'saleDate', direction: 'descending' }]);
@@ -59,6 +63,43 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
     setError(''); // 에러 초기화
   }, [member]);
 
+  useEffect(() => {
+    const modalNode = modalRef.current;
+    if (!modalNode) return;
+
+    const focusableElements = modalNode.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && focusableElements.length > 0) {
+        if (e.shiftKey) { // Shift+Tab
+          if (document.activeElement === firstElement) {
+            lastElement?.focus();
+            e.preventDefault();
+          }
+        } else { // Tab
+          if (document.activeElement === lastElement) {
+            firstElement?.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    
+    firstElement?.focus();
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [member, onClose, isEditing, analysisResult]);
 
   const { memberSales, memberSessions } = useMemo(() => {
     return {
@@ -256,23 +297,23 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
     const { name, value } = e.target;
      setNewSaleData(prev => ({
         ...prev,
-        [name]: name === 'unitPrice' ? formatCurrency(value) : value
+        [name]: name === 'amount' ? formatCurrency(value) : value
     }));
   };
 
   const handleAddNewSale = (e: React.FormEvent) => {
       e.preventDefault();
       const classCount = parseInt(newSaleData.classCount, 10);
-      const unitPrice = parseCurrency(newSaleData.unitPrice);
-      if (!newSaleData.saleDate || !classCount || !unitPrice) {
+      const amount = parseCurrency(newSaleData.amount);
+      if (!newSaleData.saleDate || !classCount || !amount) {
           alert('모든 필드를 입력해주세요.');
           return;
       }
-      onAddSale(member.id, classCount, unitPrice, newSaleData.saleDate);
+      onAddSale(member.id, classCount, amount, newSaleData.saleDate);
       setNewSaleData({
           saleDate: new Date().toISOString().split('T')[0],
           classCount: '',
-          unitPrice: ''
+          amount: ''
       });
   };
 
@@ -284,6 +325,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
       onClick={onClose}
     >
       <div 
+        ref={modalRef}
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col transform transition-all duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
@@ -300,33 +342,46 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
 
         <div className="p-4 sm:p-6 space-y-6">
           <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-slate-700">
-                {isEditing ? '회원 정보 수정' : '기본 정보'}
-              </h3>
-              {!isEditing && (
-                <button 
-                  onClick={() => setIsEditing(true)} 
-                  className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 p-1"
-                >
-                  <PencilIcon className="w-4 h-4" />
-                  수정
-                </button>
-              )}
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-700">
+                  {isEditing ? '회원 정보 수정' : '기본 정보'}
+                </h3>
+              </div>
+              <div className="flex gap-2">
+                {!isEditing && (
+                   <button 
+                      onClick={() => onAddScheduleClick(member.id)}
+                      className="flex items-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md shadow-sm transition-colors"
+                    >
+                      <CalendarPlusIcon className="w-4 h-4" />
+                      스케줄 추가
+                    </button>
+                )}
+                 {!isEditing && (
+                  <button 
+                    onClick={() => setIsEditing(true)} 
+                    className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-800 p-1.5 rounded-md bg-slate-200 hover:bg-slate-300 transition-colors"
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                    수정
+                  </button>
+                )}
+              </div>
             </div>
             {isEditing ? (
               <div className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-slate-600">이름</label>
-                  <input type="text" name="name" id="name" value={editedData.name} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm" />
+                  <input type="text" name="name" id="name" value={editedData.name} onChange={handleInputChange} className="mt-1 block w-full px-2 py-1 text-sm bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label htmlFor="totalSessions" className="block text-sm font-medium text-slate-600">등록 세션 (최신)</label>
-                  <input type="number" name="totalSessions" id="totalSessions" value={editedData.totalSessions} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm" min="0" />
+                  <input type="number" name="totalSessions" id="totalSessions" value={editedData.totalSessions} onChange={handleInputChange} className="mt-1 block w-full px-2 py-1 text-sm bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" min="0" />
                 </div>
                 <div>
                   <label htmlFor="unitPrice" className="block text-sm font-medium text-slate-600">단가 (최신, 원)</label>
-                  <input type="text" inputMode="numeric" name="unitPrice" id="unitPrice" value={editedData.unitPrice} onChange={handleInputChange} className="mt-1 block w-full px-3 py-2 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm" />
+                  <input type="text" inputMode="numeric" name="unitPrice" id="unitPrice" value={editedData.unitPrice} onChange={handleInputChange} className="mt-1 block w-full px-2 py-1 text-sm bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button 
@@ -415,27 +470,27 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
                             <table className="min-w-full divide-y divide-slate-200 text-sm">
                                 <thead className="bg-slate-100 sticky top-0">
                                     <tr>
-                                        <th scope="col" className="px-3 py-2 text-left font-medium text-slate-500">
+                                        <th scope="col" className="px-3 py-1.5 text-left font-medium text-slate-500">
                                             <button onClick={(e) => requestSort('saleDate', e)} className="flex items-center">
                                                 일자{getSortIndicator('saleDate')}
                                             </button>
                                         </th>
-                                        <th scope="col" className="px-3 py-2 text-left font-medium text-slate-500">
+                                        <th scope="col" className="px-3 py-1.5 text-left font-medium text-slate-500">
                                             <button onClick={(e) => requestSort('classCount', e)} className="flex items-center">
                                                 수업 수{getSortIndicator('classCount')}
                                             </button>
                                         </th>
-                                        <th scope="col" className="px-3 py-2 text-left font-medium text-slate-500">
-                                            <button onClick={(e) => requestSort('unitPrice', e)} className="flex items-center">
-                                                단가{getSortIndicator('unitPrice')}
-                                            </button>
-                                        </th>
-                                        <th scope="col" className="px-3 py-2 text-left font-medium text-slate-500">
+                                        <th scope="col" className="px-3 py-1.5 text-left font-medium text-slate-500">
                                             <button onClick={(e) => requestSort('amount', e)} className="flex items-center">
                                                 금액{getSortIndicator('amount')}
                                             </button>
                                         </th>
-                                        <th scope="col" className="relative px-3 py-2"><span className="sr-only">삭제</span></th>
+                                        <th scope="col" className="px-3 py-1.5 text-left font-medium text-slate-500">
+                                            <button onClick={(e) => requestSort('unitPrice', e)} className="flex items-center">
+                                                단가{getSortIndicator('unitPrice')}
+                                            </button>
+                                        </th>
+                                        <th scope="col" className="relative px-3 py-1.5"><span className="sr-only">삭제</span></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-200">
@@ -462,13 +517,15 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
                                                 <input
                                                     type="text"
                                                     inputMode="numeric"
-                                                    value={formatCurrency(sale.unitPrice)}
-                                                    onChange={(e) => onUpdateSale(sale.id, 'unitPrice', parseCurrency(e.target.value))}
+                                                    value={formatCurrency(sale.amount)}
+                                                    onChange={(e) => onUpdateSale(sale.id, 'amount', parseCurrency(e.target.value))}
                                                     className="w-24 p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 whitespace-nowrap font-semibold text-slate-800">{sale.amount.toLocaleString()} 원</td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-right">
+                                            <td className="px-3 py-1.5 whitespace-nowrap font-semibold text-slate-800">
+                                                {(sale.classCount > 0 ? Math.floor(sale.amount / sale.classCount) : 0).toLocaleString()} 원
+                                            </td>
+                                            <td className="px-3 py-1.5 whitespace-nowrap text-right">
                                                 <button
                                                     onClick={() => onDeleteSale(sale.id)}
                                                     className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
@@ -497,7 +554,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
                                     type="date"
                                     value={newSaleData.saleDate}
                                     onChange={handleNewSaleInputChange}
-                                    className="w-full text-sm p-1.5 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                                    className="w-full text-sm p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
                                 />
                             </div>
                             <div className="col-span-1">
@@ -509,30 +566,33 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
                                     placeholder="예: 30"
                                     value={newSaleData.classCount}
                                     onChange={handleNewSaleInputChange}
-                                    className="w-full text-sm p-1.5 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                                    className="w-full text-sm p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
                                     min="0"
                                 />
                             </div>
                             <div className="col-span-1">
-                                <label htmlFor="newUnitPrice" className="block text-xs font-medium text-slate-600 mb-1">단가</label>
+                                <label htmlFor="newAmount" className="block text-xs font-medium text-slate-600 mb-1">총 금액</label>
                                 <input
-                                    id="newUnitPrice"
-                                    name="unitPrice"
+                                    id="newAmount"
+                                    name="amount"
                                     type="text"
                                     inputMode="numeric"
-                                    placeholder="예: 50,000"
-                                    value={newSaleData.unitPrice}
+                                    placeholder="예: 1,500,000"
+                                    value={newSaleData.amount}
                                     onChange={handleNewSaleInputChange}
-                                    className="w-full text-sm p-1.5 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                                    className="w-full text-sm p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
                                 />
                             </div>
                             <div className="col-span-1">
-                                <label className="block text-xs font-medium text-slate-600 mb-1">금액</label>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">단가</label>
                                 <input
                                     type="text"
                                     readOnly
-                                    value={formatCurrency((parseInt(newSaleData.classCount,10) || 0) * parseCurrency(newSaleData.unitPrice))}
-                                    className="w-full text-sm p-1.5 border border-slate-300 rounded-md bg-slate-200 cursor-not-allowed"
+                                    value={formatCurrency(
+                                        (parseInt(newSaleData.classCount, 10) || 0) > 0 ? 
+                                        Math.floor(parseCurrency(newSaleData.amount) / parseInt(newSaleData.classCount, 10)) : 0
+                                    )}
+                                    className="w-full text-sm p-1 border border-slate-300 rounded-md bg-slate-200 cursor-not-allowed"
                                 />
                             </div>
                             <div className="col-span-1">
@@ -540,7 +600,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
                                     type="submit"
                                     aria-label="신규 매출 추가"
                                     title="신규 매출 추가"
-                                    className="w-10 h-10 ml-auto flex items-center justify-center bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                                    className="w-8 h-8 ml-auto flex items-center justify-center bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                                 >
                                     <PlusIcon className="w-5 h-5" />
                                     <span className="sr-only">추가</span>

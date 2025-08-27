@@ -37,6 +37,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ isOpen, onClose, onAd
   const [scannedSessions, setScannedSessions] = useState<ScannedSession[]>([]);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const resetState = () => {
     setStep('select');
@@ -54,6 +55,47 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ isOpen, onClose, onAd
       resetState();
     }
   }, [isOpen]);
+  
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const modalNode = modalRef.current;
+    if (!modalNode) return;
+
+    const focusableElements = modalNode.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && focusableElements.length > 0) {
+        if (e.shiftKey) { 
+          if (document.activeElement === firstElement) {
+            lastElement?.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            firstElement?.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    
+    setTimeout(() => firstElement?.focus(), 100);
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, step]);
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -308,6 +350,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ isOpen, onClose, onAd
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col transform transition-all duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
