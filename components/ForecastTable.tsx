@@ -108,6 +108,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ entries, onDeleteEntry, o
           <tr>
             <th scope="col" className="w-16 px-6 py-2 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">번호</th>
             <th scope="col" className="px-6 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <button onClick={(e) => requestSort('forecastDate', e)} className="flex items-center">
+                  예상 일자
+                  {getSortIndicator('forecastDate')}
+              </button>
+            </th>
+            <th scope="col" className="px-6 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <button onClick={(e) => requestSort('memberName', e)} className="flex items-center">
                   회원명/항목명
                   {getSortIndicator('memberName')}
@@ -140,6 +146,14 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ entries, onDeleteEntry, o
           {sortedEntries.map((entry, index) => (
             <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
               <td className="px-6 py-2 whitespace-nowrap text-sm text-center font-medium text-slate-500">{index + 1}</td>
+              <td className="px-6 py-2 whitespace-nowrap">
+                <input
+                  type="date"
+                  value={entry.forecastDate}
+                  onChange={(e) => onUpdateEntry(entry.id, 'forecastDate', e.target.value)}
+                  className="w-36 px-2 py-0.5 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800"
+                />
+              </td>
               <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-slate-900">{entry.memberName}</td>
               <td className="px-6 py-2 whitespace-nowrap">
                 <input
@@ -160,7 +174,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ entries, onDeleteEntry, o
                 />
               </td>
               <td className="px-6 py-2 whitespace-nowrap text-sm text-slate-700 font-semibold">
-                {entry.unitPrice.toLocaleString()}
+                {(entry.unitPrice || 0).toLocaleString()}
               </td>
               <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
                 <button
@@ -176,7 +190,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({ entries, onDeleteEntry, o
         </tbody>
         <tfoot className="bg-slate-100 border-t-2 border-slate-300">
           <tr className="text-lg font-bold text-slate-800">
-            <td colSpan={3} className="px-6 py-2 text-right">매출 합계</td>
+            <td colSpan={4} className="px-6 py-2 text-right">매출 합계</td>
             <td className="px-6 py-2 whitespace-nowrap">
               {totalRevenue.toLocaleString()} 원
             </td>

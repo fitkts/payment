@@ -1,5 +1,4 @@
 
-
 export interface MemberSession {
   id: string;
   sessionDate: string; // YYYY-MM-DD
@@ -12,6 +11,7 @@ export interface MemberSession {
 
 export interface ForecastEntry {
   id:string;
+  forecastDate: string; // YYYY-MM-DD
   memberName: string;
   classCount: number;
   unitPrice: number;
@@ -24,6 +24,9 @@ export interface TrackedMember {
   totalSessions: number;
   usedSessions: number;
   unitPrice: number;
+  registrationDate: string;
+  birthday?: string;
+  forecastStatus?: 'manual_dormant' | 'manual_reregister' | null;
 }
 
 export interface TrackedMemberWithStats extends TrackedMember {
@@ -41,6 +44,7 @@ export interface SaleEntry {
   classCount: number;
   unitPrice: number;
   amount: number;
+  paidAmount: number;
 }
 
 export interface SaleWithUsage extends SaleEntry {
@@ -109,3 +113,15 @@ export interface CalendarEvent {
 
 export type ViewType = 'month' | 'week' | 'day' | 'custom';
 export type EditMode = 'single' | 'future' | 'all';
+
+export type ScheduleStatus = 'planned' | 'confirmed';
+
+export interface WeeklyScheduleEntry {
+  id: string;
+  dayOfWeek: number; // 0 for Sunday, 1 for Monday, etc.
+  startTime: string; // "HH:mm"
+  endTime: string; // "HH:mm"
+  memberId: string;
+  memberName: string;
+  status: ScheduleStatus;
+}

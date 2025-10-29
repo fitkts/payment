@@ -251,13 +251,13 @@ const AddScheduleModal: React.FC<AddScheduleModalProps> = ({ isOpen, onClose, co
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-4" onClick={onClose}>
-            <div ref={modalRef} className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-0 sm:p-4" onClick={onClose}>
+            <div ref={modalRef} className="relative bg-white w-full h-full sm:rounded-2xl shadow-2xl sm:max-w-lg sm:h-auto sm:max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <header className="flex-shrink-0 p-4 border-b border-slate-200 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-slate-800">스케줄 추가</h2>
                     <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:bg-slate-200" aria-label="닫기"><XMarkIcon className="w-6 h-6" /></button>
                 </header>
-                <main className="p-6 overflow-y-auto">
+                <main className="p-6 overflow-y-auto flex-1">
                     <form onSubmit={handleSubmit} className="space-y-6">
                          <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">회원</label>

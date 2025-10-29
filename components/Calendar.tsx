@@ -1,6 +1,12 @@
 import React, { useMemo } from 'react';
 import type { CalendarEvent, CalendarEventType, DateRange, ViewType } from '../types';
-import { startOfWeek, formatDateISO } from '../utils';
+import { startOfWeek, formatDateISO, formatTimeToHHMM } from '../utils';
+import CheckCircleIcon from './icons/CheckCircleIcon';
+import UserPlusIcon from './icons/UserPlusIcon';
+import BanknotesIcon from './icons/BanknotesIcon';
+import ExclamationTriangleIcon from './icons/ExclamationTriangleIcon';
+import PencilIcon from './icons/PencilIcon';
+import ClipboardDocumentListIcon from './icons/ClipboardDocumentListIcon';
 
 interface CalendarProps {
   dateRange: DateRange;
@@ -20,29 +26,64 @@ interface CalendarViewProps {
 }
 
 const eventTypeConfig: Record<CalendarEventType, { bg: string, text: string, name: string }> = {
-    new_member: { bg: 'bg-blue-100', text: 'text-blue-800', name: '신규 회원' },
+    new_member: { bg: 'bg-indigo-100', text: 'text-indigo-800', name: '신규 회원' },
     sale: { bg: 'bg-green-100', text: 'text-green-800', name: '매출 발생' },
-    workout: { bg: 'bg-purple-100', text: 'text-purple-800', name: '수업' },
+    workout: { bg: 'bg-blue-100', text: 'text-blue-800', name: '수업' },
     refund: { bg: 'bg-red-100', text: 'text-red-800', name: '환불' },
     consultation: { bg: 'bg-yellow-100', text: 'text-yellow-800', name: '상담' },
 };
 
 const EventTag: React.FC<{event: CalendarEvent, onClick: (e: React.MouseEvent) => void}> = ({ event, onClick }) => {
     const config = eventTypeConfig[event.type];
-    const title = event.type === 'workout' 
-        ? `${event.startTime} ${event.title}` 
+    
+    const titleText = event.type === 'workout' 
+        ? `${formatTimeToHHMM(event.startTime)} ${event.title}` 
         : event.title;
+
+    let visualIndicator: React.ReactNode = null;
+    let containerClasses = `flex items-center text-[11px] px-1.5 py-0.5 rounded truncate cursor-pointer transition-transform hover:scale-105 ${config.bg} ${config.text}`;
+    let titleElement = <span className="font-semibold truncate">{titleText}</span>;
+    const iconClass = "w-3 h-3 mr-1 flex-shrink-0";
+
+    switch (event.type) {
+        case 'workout':
+            if (event.status === 'completed') {
+                visualIndicator = <CheckCircleIcon className={iconClass} />;
+                containerClasses = `flex items-center text-[11px] px-1.5 py-0.5 rounded truncate cursor-pointer transition-transform hover:scale-105 bg-green-100 text-green-800`;
+            } else if (event.status === 'cancelled') {
+                titleElement = <s className="font-semibold truncate">{titleText}</s>;
+                containerClasses = `flex items-center text-[11px] px-1.5 py-0.5 rounded truncate cursor-pointer bg-slate-100 text-slate-500`;
+            } else {
+                 visualIndicator = <ClipboardDocumentListIcon className={iconClass} />;
+            }
+            break;
+        case 'new_member':
+            visualIndicator = <UserPlusIcon className={iconClass} />;
+            break;
+        case 'sale':
+            visualIndicator = <BanknotesIcon className={iconClass} />;
+            break;
+        case 'refund':
+            visualIndicator = <ExclamationTriangleIcon className={iconClass} />;
+            break;
+        case 'consultation':
+            visualIndicator = <PencilIcon className={iconClass} />;
+            break;
+        default:
+            break;
+    }
 
     return (
         <div 
-            title={title}
+            title={titleText}
             onClick={onClick}
             onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') onClick(e as any);}}
             tabIndex={0}
             role="button"
-            className={`flex items-center text-[11px] px-1.5 py-0.5 rounded truncate cursor-pointer transition-transform hover:scale-105 ${config.bg} ${config.text}`}
+            className={containerClasses}
         >
-           <span className="font-semibold truncate">{title}</span>
+           {visualIndicator}
+           {titleElement}
         </div>
     )
 }

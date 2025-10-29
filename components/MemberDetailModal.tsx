@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
@@ -14,6 +15,8 @@ import ChevronUpIcon from './icons/ChevronUpIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import ChevronUpDownIcon from './icons/ChevronUpDownIcon';
 import CalendarPlusIcon from './icons/CalendarPlusIcon';
+import ChevronLeftIcon from './icons/ChevronLeftIcon';
+import ChevronRightIcon from './icons/ChevronRightIcon';
 
 
 interface MemberDetailModalProps {
@@ -22,13 +25,13 @@ interface MemberDetailModalProps {
   allSessions: MemberSession[];
   onClose: () => void;
   onUpdateMember: (id: string, data: { name: string; totalSessions: number; unitPrice: number; }) => void;
-  onAddSale: (memberId: string, classCount: number, amount: number, saleDate: string) => void;
+  onAddSale: (memberId: string, classCount: number, amount: number, saleDate: string, paidAmount: number) => void;
   onDeleteSale: (id: string) => void;
-  onUpdateSale: (id: string, field: 'saleDate' | 'classCount' | 'amount', value: string | number) => void;
+  onUpdateSale: (id: string, field: 'saleDate' | 'classCount' | 'amount' | 'paidAmount', value: string | number) => void;
   onAddScheduleClick: (memberId: string) => void;
 }
 
-type SaleSortKeys = keyof SaleEntry;
+type SaleSortKeys = keyof SaleEntry | 'unpaidAmount';
 type SortConfigItem = { key: SaleSortKeys; direction: 'ascending' | 'descending' };
 
 const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales, allSessions, onClose, onUpdateMember, onAddSale, onDeleteSale, onUpdateSale, onAddScheduleClick }) => {
@@ -37,6 +40,9 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+  const [isRegistrationStatusExpanded, setIsRegistrationStatusExpanded] = useState(false);
+  const [salesCurrentPage, setSalesCurrentPage] = useState(1);
+  const salesItemsPerPage = 3;
   
   const [editedData, setEditedData] = useState({
       name: member.name,
@@ -47,7 +53,8 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
   const [newSaleData, setNewSaleData] = useState({
       saleDate: new Date().toISOString().split('T')[0],
       classCount: '',
-      amount: ''
+      amount: '',
+      paidAmount: '',
   });
   
   const [sortConfig, setSortConfig] = useState<SortConfigItem[]>([{ key: 'saleDate', direction: 'descending' }]);
@@ -61,6 +68,8 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
     setIsEditing(false); // 모달이 다른 회원으로 열릴 때 수정 모드 해제
     setAnalysisResult(''); // 분석 결과 초기화
     setError(''); // 에러 초기화
+    setIsRegistrationStatusExpanded(false);
+    setSalesCurrentPage(1);
   }, [member]);
 
   useEffect(() => {
@@ -109,13 +118,13 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
   }, [member.id, allSales, allSessions]);
 
   const sortedMemberSales = useMemo(() => {
-    let sortableItems = [...memberSales];
+    let sortableItems = memberSales.map(s => ({...s, unpaidAmount: (s.amount || 0) - (s.paidAmount || 0)}));
     if (sortConfig.length > 0) {
         sortableItems.sort((a, b) => {
             for (const config of sortConfig) {
                 const { key, direction } = config;
-                const aValue = a[key];
-                const bValue = b[key];
+                const aValue = a[key as keyof typeof a];
+                const bValue = b[key as keyof typeof b];
                 
                 let comparison = 0;
                 if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -133,6 +142,13 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
     }
     return sortableItems;
   }, [memberSales, sortConfig]);
+
+  const { paginatedSales, totalSalesPages } = useMemo(() => {
+    const totalPages = Math.ceil(sortedMemberSales.length / salesItemsPerPage);
+    const startIndex = (salesCurrentPage - 1) * salesItemsPerPage;
+    const paginated = sortedMemberSales.slice(startIndex, startIndex + salesItemsPerPage);
+    return { paginatedSales: paginated, totalSalesPages: totalPages };
+  }, [sortedMemberSales, salesCurrentPage]);
 
   const requestSort = (key: SaleSortKeys, event: React.MouseEvent) => {
     const isShiftPressed = event.shiftKey;
@@ -184,7 +200,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
     let usedSessionsCounter = member.usedSessions;
 
     const salesWithUsageDetails = sortedSales.map(sale => {
-        const usedForThisSale = Math.min(sale.classCount, usedSessionsCounter);
+        const usedForThisSale = Math.min((sale.classCount || 0), usedSessionsCounter);
         usedSessionsCounter -= usedForThisSale;
         
         return {
@@ -220,7 +236,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
 
         **회원 데이터:**
         - 이름: ${member.name}
-        - 총 누적 매출 (LTV): ${member.ltv.toLocaleString()}원
+        - 총 누적 매출 (LTV): ${(member.ltv || 0).toLocaleString()}원
         - 총 누적 등록 세션 수: ${member.cumulativeTotalSessions}회
         - 총 사용 세션 수: ${member.usedSessions}회
         - 잔여 세션 수: ${remainingSessions}회
@@ -262,11 +278,8 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
       setAnalysisResult(response.text);
     } catch (e: unknown) {
       console.error(e);
-      if (e instanceof Error) {
-          setError(`분석 중 오류가 발생했습니다: ${e.message}`);
-      } else {
-          setError(`분석 중 알 수 없는 오류가 발생했습니다: ${String(e)}`);
-      }
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setError(`분석 중 오류가 발생했습니다: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -297,36 +310,43 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
     const { name, value } = e.target;
      setNewSaleData(prev => ({
         ...prev,
-        [name]: name === 'amount' ? formatCurrency(value) : value
+        [name]: name === 'amount' || name === 'paidAmount' ? formatCurrency(value) : value
     }));
+
+     if (name === 'amount') {
+      setNewSaleData(prev => ({...prev, paidAmount: formatCurrency(value)}));
+    }
   };
 
   const handleAddNewSale = (e: React.FormEvent) => {
       e.preventDefault();
       const classCount = parseInt(newSaleData.classCount, 10);
       const amount = parseCurrency(newSaleData.amount);
+      const paidAmount = parseCurrency(newSaleData.paidAmount);
+
       if (!newSaleData.saleDate || !classCount || !amount) {
           alert('모든 필드를 입력해주세요.');
           return;
       }
-      onAddSale(member.id, classCount, amount, newSaleData.saleDate);
+      onAddSale(member.id, classCount, amount, newSaleData.saleDate, paidAmount);
       setNewSaleData({
           saleDate: new Date().toISOString().split('T')[0],
           classCount: '',
-          amount: ''
+          amount: '',
+          paidAmount: '',
       });
   };
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-4"
+      className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-0 sm:p-4"
       aria-modal="true"
       role="dialog"
       onClick={onClose}
     >
       <div 
         ref={modalRef}
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col transform transition-all duration-300 ease-out"
+        className="relative bg-white w-full h-full sm:rounded-2xl shadow-2xl sm:max-w-4xl sm:max-h-[90vh] sm:h-auto overflow-y-auto flex flex-col transform transition-all duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="sticky top-0 bg-white/80 backdrop-blur-sm z-10 p-4 sm:p-6 border-b border-slate-200 flex justify-between items-center">
@@ -340,7 +360,7 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
           </button>
         </header>
 
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
           <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -405,16 +425,24 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
                       <span className="font-semibold text-slate-800">{member.name}</span>
                   </div>
                   <div className="flex justify-between">
+                      <span className="font-medium text-slate-600">생년월일</span>
+                      <span className="font-semibold text-slate-800">{member.birthday || '정보 없음'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                      <span className="font-medium text-slate-600">최초 등록일</span>
+                      <span className="font-semibold text-slate-800">{member.registrationDate.split('T')[0]}</span>
+                  </div>
+                  <div className="flex justify-between">
                       <span className="font-medium text-slate-600">최근 등록 정보</span>
-                      <span className="font-semibold text-slate-800">{member.totalSessions}회 / {member.unitPrice.toLocaleString()}원</span>
+                      <span className="font-semibold text-slate-800">{member.totalSessions}회 / {(member.unitPrice || 0).toLocaleString()}원</span>
                   </div>
                    <div className="flex justify-between">
                         <span className="font-medium text-slate-600">총 누적 매출 (LTV)</span>
-                        <span className="font-bold text-blue-600">{member.ltv.toLocaleString()} 원</span>
+                        <span className="font-bold text-blue-600">{(member.ltv || 0).toLocaleString()} 원</span>
                     </div>
                      <div className="flex justify-between">
                       <span className="font-medium text-slate-600">마지막 수업일</span>
-                      <span className="font-semibold text-slate-800">{member.lastSessionDate || '기록 없음'}</span>
+                      <span className="font-semibold text-slate-800">{member.lastSessionDate ? member.lastSessionDate.split('T')[0] : '기록 없음'}</span>
                     </div>
               </div>
             )}
@@ -422,122 +450,128 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
           
           <div className={`${isEditing ? 'hidden' : 'block'} space-y-6`}>
               <div>
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">개별 등록 현황 (선입선출)</h3>
-                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 text-sm">
-                    {salesWithUsage.length > 0 ? (
-                        salesWithUsage.map(sale => {
-                            const progress = sale.classCount > 0 ? (sale.usedCount / sale.classCount) * 100 : 0;
-                            const progressWidth = Math.min(progress, 100);
-                            const lastActiveSale = [...salesWithUsage].reverse().find(s => s.usedCount < s.classCount);
-                            const isActive = lastActiveSale && lastActiveSale.id === sale.id;
+                <button
+                  type="button"
+                  className="w-full flex justify-between items-center text-left py-2"
+                  onClick={() => setIsRegistrationStatusExpanded(prev => !prev)}
+                  aria-expanded={isRegistrationStatusExpanded}
+                  aria-controls="registration-status-content"
+                >
+                  <h3 className="text-lg font-semibold text-slate-700">개별 등록 현황 (선입선출)</h3>
+                  {isRegistrationStatusExpanded ? <ChevronUpIcon className="w-5 h-5 text-slate-500" /> : <ChevronDownIcon className="w-5 h-5 text-slate-500" />}
+                </button>
+                <div 
+                    id="registration-status-content"
+                    className={`transition-all duration-500 ease-in-out overflow-hidden ${isRegistrationStatusExpanded ? 'max-h-[500px] pt-2' : 'max-h-0'}`}
+                >
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 text-sm">
+                        {salesWithUsage.length > 0 ? (
+                            salesWithUsage.map(sale => {
+                                const progress = (sale.classCount || 0) > 0 ? (sale.usedCount / (sale.classCount || 1)) * 100 : 0;
+                                const progressWidth = Math.min(progress, 100);
+                                const lastActiveSale = [...salesWithUsage].reverse().find(s => s.usedCount < (s.classCount || 0));
+                                const isActive = lastActiveSale && lastActiveSale.id === sale.id;
 
-                            return (
-                                <div key={sale.id}>
-                                    <div className="flex justify-between items-center text-xs mb-1">
-                                        <span className="font-semibold text-slate-700">
-                                            {sale.saleDate} 등록 ({sale.classCount}회 / {sale.unitPrice.toLocaleString()}원)
-                                            {isActive && <span className="ml-2 text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">사용중</span>}
-                                        </span>
-                                        <span className="font-medium text-slate-600">{sale.usedCount} / {sale.classCount} 회</span>
+                                return (
+                                    <div key={sale.id}>
+                                        <div className="flex justify-between items-center text-xs mb-1">
+                                            <span className="font-semibold text-slate-700">
+                                                {sale.saleDate.split('T')[0]} 등록 ({sale.classCount || 0}회 / {(sale.unitPrice || 0).toLocaleString()}원)
+                                                {isActive && <span className="ml-2 text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">사용중</span>}
+                                            </span>
+                                            <span className="font-medium text-slate-600">{sale.usedCount} / {sale.classCount || 0} 회</span>
+                                        </div>
+                                        <div className="w-full bg-slate-200 rounded-full h-2">
+                                            <div 
+                                                className={`${isActive ? 'bg-blue-500' : 'bg-green-500'} h-2 rounded-full transition-all duration-300`} 
+                                                style={{ width: `${progressWidth}%` }}
+                                            ></div>
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-slate-200 rounded-full h-2">
-                                        <div 
-                                            className={`${isActive ? 'bg-blue-500' : 'bg-green-500'} h-2 rounded-full transition-all duration-300`} 
-                                            style={{ width: `${progressWidth}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            )
-                        })
-                    ) : (
-                      <p className="text-slate-500 text-center py-4">등록 내역이 없습니다.</p>
-                    )}
-                    <div className="!mt-4 pt-4 border-t border-slate-200">
-                      <div className="flex justify-between font-bold">
-                        <span className="text-slate-600">총 잔여 세션</span>
-                        <span className={`${remainingSessions < 0 ? 'text-red-600' : 'text-slate-800'}`}>
-                            {remainingSessions}회
-                        </span>
-                      </div>
+                                )
+                            })
+                        ) : (
+                        <p className="text-slate-500 text-center py-4">등록 내역이 없습니다.</p>
+                        )}
+                        <div className="!mt-4 pt-4 border-t border-slate-200">
+                        <div className="flex justify-between font-bold">
+                            <span className="text-slate-600">총 잔여 세션</span>
+                            <span className={`${remainingSessions < 0 ? 'text-red-600' : 'text-slate-800'}`}>
+                                {remainingSessions}회
+                            </span>
+                        </div>
+                        </div>
                     </div>
                 </div>
               </div>
               
               <div>
                   <h3 className="text-lg font-semibold text-slate-700 mb-2">매출 이력</h3>
-                    <div className="max-h-60 overflow-y-auto bg-white rounded-lg shadow-inner border border-slate-200">
+                    <div className="bg-white rounded-lg shadow-inner border border-slate-200">
                         {memberSales.length > 0 ? (
-                            <table className="min-w-full divide-y divide-slate-200 text-sm">
-                                <thead className="bg-slate-100 sticky top-0">
-                                    <tr>
-                                        <th scope="col" className="px-3 py-1.5 text-left font-medium text-slate-500">
-                                            <button onClick={(e) => requestSort('saleDate', e)} className="flex items-center">
-                                                일자{getSortIndicator('saleDate')}
-                                            </button>
-                                        </th>
-                                        <th scope="col" className="px-3 py-1.5 text-left font-medium text-slate-500">
-                                            <button onClick={(e) => requestSort('classCount', e)} className="flex items-center">
-                                                수업 수{getSortIndicator('classCount')}
-                                            </button>
-                                        </th>
-                                        <th scope="col" className="px-3 py-1.5 text-left font-medium text-slate-500">
-                                            <button onClick={(e) => requestSort('amount', e)} className="flex items-center">
-                                                금액{getSortIndicator('amount')}
-                                            </button>
-                                        </th>
-                                        <th scope="col" className="px-3 py-1.5 text-left font-medium text-slate-500">
-                                            <button onClick={(e) => requestSort('unitPrice', e)} className="flex items-center">
-                                                단가{getSortIndicator('unitPrice')}
-                                            </button>
-                                        </th>
-                                        <th scope="col" className="relative px-3 py-1.5"><span className="sr-only">삭제</span></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-slate-200">
-                                    {sortedMemberSales.map(sale => (
-                                        <tr key={sale.id}>
-                                            <td className="px-3 py-1 whitespace-nowrap">
-                                                <input
-                                                    type="date"
-                                                    value={sale.saleDate}
-                                                    onChange={(e) => onUpdateSale(sale.id, 'saleDate', e.target.value)}
-                                                    className="w-36 p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-1 whitespace-nowrap">
-                                                <input
-                                                    type="number"
-                                                    value={sale.classCount}
-                                                    onChange={(e) => onUpdateSale(sale.id, 'classCount', parseInt(e.target.value) || 0)}
-                                                    className="w-20 p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                                                    min="0"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-1 whitespace-nowrap">
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    value={formatCurrency(sale.amount)}
-                                                    onChange={(e) => onUpdateSale(sale.id, 'amount', parseCurrency(e.target.value))}
-                                                    className="w-24 p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-1.5 whitespace-nowrap font-semibold text-slate-800">
-                                                {(sale.classCount > 0 ? Math.floor(sale.amount / sale.classCount) : 0).toLocaleString()} 원
-                                            </td>
-                                            <td className="px-3 py-1.5 whitespace-nowrap text-right">
-                                                <button
-                                                    onClick={() => onDeleteSale(sale.id)}
-                                                    className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
-                                                    aria-label={`${sale.memberName} 매출 삭제`}
-                                                >
-                                                    <TrashIcon className="w-4 h-4" />
-                                                </button>
-                                            </td>
+                           <>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-200 text-xs">
+                                    <thead className="bg-slate-100 sticky top-0">
+                                        <tr>
+                                            <th scope="col" className="px-2 py-1.5 text-left font-medium text-slate-500"><button onClick={(e) => requestSort('saleDate', e)} className="flex items-center">일자{getSortIndicator('saleDate')}</button></th>
+                                            <th scope="col" className="px-2 py-1.5 text-left font-medium text-slate-500"><button onClick={(e) => requestSort('classCount', e)} className="flex items-center">수업{getSortIndicator('classCount')}</button></th>
+                                            <th scope="col" className="px-2 py-1.5 text-left font-medium text-slate-500"><button onClick={(e) => requestSort('amount', e)} className="flex items-center">총 금액{getSortIndicator('amount')}</button></th>
+                                            <th scope="col" className="px-2 py-1.5 text-left font-medium text-slate-500"><button onClick={(e) => requestSort('paidAmount', e)} className="flex items-center">결제 금액{getSortIndicator('paidAmount')}</button></th>
+                                            <th scope="col" className="px-2 py-1.5 text-left font-medium text-slate-500"><button onClick={(e) => requestSort('unpaidAmount', e)} className="flex items-center">미수금{getSortIndicator('unpaidAmount')}</button></th>
+                                            <th scope="col" className="px-2 py-1.5 text-left font-medium text-slate-500">상태</th>
+                                            <th scope="col" className="relative px-2 py-1.5"><span className="sr-only">삭제</span></th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-200">
+                                        {paginatedSales.map(sale => {
+                                            const unpaidAmount = (sale.amount || 0) - (sale.paidAmount || 0);
+                                            const status = unpaidAmount <= 0 
+                                                ? { text: '완납', className: 'bg-green-100 text-green-800' }
+                                                : { text: '미납', className: 'bg-orange-100 text-orange-800' };
+                                            return (
+                                                <tr key={sale.id}>
+                                                    <td className="px-2 py-1 whitespace-nowrap"><input type="date" value={sale.saleDate.split('T')[0]} onChange={(e) => onUpdateSale(sale.id, 'saleDate', e.target.value)} className="w-full p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md"/></td>
+                                                    <td className="px-2 py-1 whitespace-nowrap"><input type="number" value={sale.classCount} onChange={(e) => onUpdateSale(sale.id, 'classCount', parseInt(e.target.value) || 0)} className="w-16 p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md" min="0"/></td>
+                                                    <td className="px-2 py-1 whitespace-nowrap"><input type="text" inputMode="numeric" value={formatCurrency(sale.amount)} onChange={(e) => onUpdateSale(sale.id, 'amount', parseCurrency(e.target.value))} className="w-24 p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md"/></td>
+                                                    <td className="px-2 py-1 whitespace-nowrap"><input type="text" inputMode="numeric" value={formatCurrency(sale.paidAmount)} onChange={(e) => onUpdateSale(sale.id, 'paidAmount', parseCurrency(e.target.value))} className="w-24 p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md"/></td>
+                                                    <td className={`px-2 py-1 whitespace-nowrap font-semibold ${unpaidAmount > 0 ? 'text-red-600' : 'text-slate-800'}`}>{formatCurrency(unpaidAmount)}</td>
+                                                    <td className="px-2 py-1 whitespace-nowrap text-center"><span className={`px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full ${status.className}`}>{status.text}</span></td>
+                                                    <td className="px-2 py-1 whitespace-nowrap text-right">
+                                                        <button onClick={() => onDeleteSale(sale.id)} className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100" aria-label={`${sale.memberName} 매출 삭제`}>
+                                                            <TrashIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {totalSalesPages > 1 && (
+                                <div className="flex items-center justify-end gap-2 p-2 border-t border-slate-200">
+                                    <span className="text-xs text-slate-500">
+                                        {totalSalesPages} 페이지 중 {salesCurrentPage}
+                                    </span>
+                                    <button
+                                        onClick={() => setSalesCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={salesCurrentPage === 1}
+                                        className="p-1 rounded-md hover:bg-slate-200 disabled:opacity-50"
+                                        aria-label="이전 페이지"
+                                    >
+                                        <ChevronLeftIcon className="w-4 h-4 text-slate-600" />
+                                    </button>
+                                    <button
+                                        onClick={() => setSalesCurrentPage(p => Math.min(totalSalesPages, p + 1))}
+                                        disabled={salesCurrentPage === totalSalesPages}
+                                        className="p-1 rounded-md hover:bg-slate-200 disabled:opacity-50"
+                                        aria-label="다음 페이지"
+                                    >
+                                        <ChevronRightIcon className="w-4 h-4 text-slate-600" />
+                                    </button>
+                                </div>
+                            )}
+                           </>
                         ) : (
                             <div className="text-center py-10 text-slate-500 text-sm">매출 이력이 없습니다.</div>
                         )}
@@ -545,67 +579,13 @@ const MemberDetailModal: React.FC<MemberDetailModalProps> = ({ member, allSales,
                      {/* Add new sale form */}
                     <div className="mt-4">
                         <h4 className="text-md font-semibold text-slate-700 mb-2">신규 매출 추가</h4>
-                        <form onSubmit={handleAddNewSale} className="grid grid-cols-5 gap-3 items-end bg-slate-50 p-3 rounded-lg border border-slate-200">
-                            <div className="col-span-1">
-                                <label htmlFor="newSaleDate" className="block text-xs font-medium text-slate-600 mb-1">일자</label>
-                                <input
-                                    id="newSaleDate"
-                                    name="saleDate"
-                                    type="date"
-                                    value={newSaleData.saleDate}
-                                    onChange={handleNewSaleInputChange}
-                                    className="w-full text-sm p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                                />
-                            </div>
-                            <div className="col-span-1">
-                                <label htmlFor="newClassCount" className="block text-xs font-medium text-slate-600 mb-1">수업 수</label>
-                                <input
-                                    id="newClassCount"
-                                    name="classCount"
-                                    type="number"
-                                    placeholder="예: 30"
-                                    value={newSaleData.classCount}
-                                    onChange={handleNewSaleInputChange}
-                                    className="w-full text-sm p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                                    min="0"
-                                />
-                            </div>
-                            <div className="col-span-1">
-                                <label htmlFor="newAmount" className="block text-xs font-medium text-slate-600 mb-1">총 금액</label>
-                                <input
-                                    id="newAmount"
-                                    name="amount"
-                                    type="text"
-                                    inputMode="numeric"
-                                    placeholder="예: 1,500,000"
-                                    value={newSaleData.amount}
-                                    onChange={handleNewSaleInputChange}
-                                    className="w-full text-sm p-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                                />
-                            </div>
-                            <div className="col-span-1">
-                                <label className="block text-xs font-medium text-slate-600 mb-1">단가</label>
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={formatCurrency(
-                                        (parseInt(newSaleData.classCount, 10) || 0) > 0 ? 
-                                        Math.floor(parseCurrency(newSaleData.amount) / parseInt(newSaleData.classCount, 10)) : 0
-                                    )}
-                                    className="w-full text-sm p-1 border border-slate-300 rounded-md bg-slate-200 cursor-not-allowed"
-                                />
-                            </div>
-                            <div className="col-span-1">
-                                <button
-                                    type="submit"
-                                    aria-label="신규 매출 추가"
-                                    title="신규 매출 추가"
-                                    className="w-8 h-8 ml-auto flex items-center justify-center bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                                >
-                                    <PlusIcon className="w-5 h-5" />
-                                    <span className="sr-only">추가</span>
-                                </button>
-                            </div>
+                        <form onSubmit={handleAddNewSale} className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end bg-slate-50 p-3 rounded-lg border border-slate-200">
+                            <div className="sm:col-span-1"><label htmlFor="newSaleDate" className="block text-xs font-medium text-slate-600 mb-1">일자</label><input id="newSaleDate" name="saleDate" type="date" value={newSaleData.saleDate} onChange={handleNewSaleInputChange} className="w-full text-sm p-1 bg-white text-slate-800 border border-slate-300 rounded-md"/></div>
+                            <div className="sm:col-span-1"><label htmlFor="newClassCount" className="block text-xs font-medium text-slate-600 mb-1">수업 수</label><input id="newClassCount" name="classCount" type="number" placeholder="예: 30" value={newSaleData.classCount} onChange={handleNewSaleInputChange} className="w-full text-sm p-1 bg-white text-slate-800 border border-slate-300 rounded-md" min="0"/></div>
+                            <div className="sm:col-span-1"><label htmlFor="newAmount" className="block text-xs font-medium text-slate-600 mb-1">총 금액</label><input id="newAmount" name="amount" type="text" inputMode="numeric" placeholder="예: 1,500,000" value={newSaleData.amount} onChange={handleNewSaleInputChange} className="w-full text-sm p-1 bg-white text-slate-800 border border-slate-300 rounded-md"/></div>
+                            <div className="sm:col-span-1"><label htmlFor="newPaidAmount" className="block text-xs font-medium text-slate-600 mb-1">결제 금액</label><input id="newPaidAmount" name="paidAmount" type="text" inputMode="numeric" placeholder="예: 1,500,000" value={newSaleData.paidAmount} onChange={handleNewSaleInputChange} className="w-full text-sm p-1 bg-white text-slate-800 border border-slate-300 rounded-md"/></div>
+                            <div className="sm:col-span-1"><label className="block text-xs font-medium text-slate-600 mb-1">미수금</label><input type="text" readOnly value={formatCurrency(parseCurrency(newSaleData.amount) - parseCurrency(newSaleData.paidAmount))} className="w-full text-sm p-1 border border-slate-300 rounded-md bg-slate-200 cursor-not-allowed"/></div>
+                            <div className="sm:col-span-1"><button type="submit" aria-label="신규 매출 추가" title="신규 매출 추가" className="w-full h-8 flex items-center justify-center bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700"><PlusIcon className="w-5 h-5" /></button></div>
                         </form>
                     </div>
               </div>

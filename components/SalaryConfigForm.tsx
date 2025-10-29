@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { formatCurrency, parseCurrency } from '../utils';
 
@@ -26,7 +25,7 @@ const SalaryConfigForm: React.FC<SalaryConfigFormProps> = ({
   setSalesIncentiveRate,
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
       <div>
         <label htmlFor="baseSalary" className="block text-sm font-medium text-slate-600 mb-1">
           기본급 (원)
@@ -72,7 +71,7 @@ const SalaryConfigForm: React.FC<SalaryConfigFormProps> = ({
       </div>
       <div>
         <label htmlFor="monthlySales" className="block text-sm font-medium text-slate-600 mb-1">
-          월 매출액 (자동 계산)
+          월 매출액 (자동)
         </label>
         <input
           id="monthlySales"

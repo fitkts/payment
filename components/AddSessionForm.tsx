@@ -61,11 +61,11 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
 
     let activeSale: SaleEntry | null = null;
     for (const sale of memberSalesSorted) {
-        if (sessionsToAccountFor < sale.classCount) {
+        if (sessionsToAccountFor < (sale.classCount || 0)) {
             activeSale = sale;
             break;
         }
-        sessionsToAccountFor -= sale.classCount;
+        sessionsToAccountFor -= (sale.classCount || 0);
     }
 
     if (activeSale) {
@@ -73,7 +73,7 @@ const AddSessionForm: React.FC<AddSessionFormProps> = ({ onAddSession, disabled,
         setUnitPriceInfo(`${activeSale.saleDate} 등록분`);
     } else {
         const latestSale = memberSalesSorted.length > 0 ? memberSalesSorted[memberSalesSorted.length - 1] : null;
-        setUnitPrice(latestSale ? formatCurrency(latestSale.unitPrice) : '');
+        setUnitPrice(formatCurrency(latestSale?.unitPrice || 0));
         setUnitPriceInfo('잔여 세션 없음');
     }
   };

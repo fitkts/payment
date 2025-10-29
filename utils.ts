@@ -1,5 +1,4 @@
 
-
 export const formatCurrency = (value: number | string): string => {
   if (value === null || value === undefined) return '';
   const stringValue = String(value).replace(/,/g, '');
@@ -61,4 +60,23 @@ export const formatDateISO = (date: Date): string => {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+};
+
+export const formatTimeToHHMM = (timeStr: string): string => {
+    if (!timeStr) return '';
+    // If it's already in HH:mm format, just return it and ensure padding
+    if (/^\d{1,2}:\d{2}$/.test(timeStr)) {
+        const [hour, minute] = timeStr.split(':');
+        return `${hour.padStart(2, '0')}:${minute}`;
+    }
+    // Try to parse it as a Date from an ISO string or other valid format
+    const date = new Date(timeStr);
+    if (!isNaN(date.getTime())) {
+        // When Google Sheets time values are serialized, they can become full date-time strings in UTC.
+        // Using getUTCHours and getUTCMinutes ensures we extract the time as it appears in the string,
+        // ignoring the user's local timezone which would be applied by getHours/getMinutes.
+        return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
+    }
+    // Return original string as fallback if it's not a parsable date and not in HH:mm format
+    return timeStr;
 };

@@ -1,20 +1,25 @@
+
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { TrackedMemberWithStats, CalendarEvent, EditMode } from '../types';
+import type { TrackedMemberWithStats, CalendarEvent, EditMode, MemberSession } from '../types';
 import XMarkIcon from './icons/XMarkIcon';
-import CalendarPlusIcon from './icons/CalendarPlusIcon';
 import TrashIcon from './icons/TrashIcon';
-import { formatDateISO } from '../utils';
+import { formatDateISO, formatCurrency } from '../utils';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import ExclamationTriangleIcon from './icons/ExclamationTriangleIcon';
+import ArrowUturnLeftIcon from './icons/ArrowUturnLeftIcon';
 
 interface EditScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
   event: CalendarEvent;
   members: TrackedMemberWithStats[];
-  onUpdateSchedule: (eventId: string, formData: Partial<CalendarEvent>, mode: EditMode) => void;
-  onDeleteSchedule: (eventId: string, mode: EditMode) => void;
+  onUpdateSchedule: (eventId: string, formData: Partial<CalendarEvent>, mode: EditMode) => Promise<void>;
+  onDeleteSchedule: (eventId: string, mode: EditMode) => Promise<void>;
+  onCompleteSession: (eventId: string) => Promise<void>;
+  onUncompleteSession: (eventId: string) => Promise<void>;
   calendarEvents: CalendarEvent[];
+  allSessions: MemberSession[];
 }
 
 const timeOptions = Array.from({ length: 30 }, (_, i) => {
@@ -23,7 +28,7 @@ const timeOptions = Array.from({ length: 30 }, (_, i) => {
     return `${hour}:${minute}`;
 });
 
-const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, event, members, onUpdateSchedule, onDeleteSchedule, calendarEvents }) => {
+const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, event, members, onUpdateSchedule, onDeleteSchedule, onCompleteSession, onUncompleteSession, calendarEvents, allSessions }) => {
     const [date, setDate] = useState('');
     const [startTime, setStartTime] = useState('');
     const [duration, setDuration] = useState(50);
@@ -32,6 +37,14 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, 
     const modalRef = useRef<HTMLDivElement>(null);
 
     const member = useMemo(() => members.find(m => m.id === event.memberId), [members, event.memberId]);
+
+    const memberSessions = useMemo(() => {
+        if (!event.memberId) return [];
+        return allSessions
+            .filter(s => s.memberId === event.memberId)
+            .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
+            .slice(0, 5); // Show last 5 sessions
+    }, [allSessions, event.memberId]);
 
     useEffect(() => {
         if (isOpen) {
@@ -71,7 +84,7 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, 
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose, editMode, isConfirmingDelete]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const [h, m] = startTime.split(':').map(Number);
         const newEndTime = new Date();
@@ -82,12 +95,29 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, 
             startTime,
             endTime: `${String(newEndTime.getHours()).padStart(2, '0')}:${String(newEndTime.getMinutes()).padStart(2, '0')}`
         };
-        onUpdateSchedule(event.id, formData, editMode);
+        await onUpdateSchedule(event.id, formData, editMode);
+        onClose();
     };
 
     const handleDelete = () => {
         setIsConfirmingDelete(true);
     };
+    
+    const handleConfirmDelete = async () => {
+        await onDeleteSchedule(event.id, editMode);
+        onClose();
+    };
+
+    const handleComplete = async () => {
+        await onCompleteSession(event.id);
+        onClose();
+    };
+
+    const handleUncomplete = async () => {
+        await onUncompleteSession(event.id);
+        onClose();
+    };
+
 
     const confirmMessage = useMemo(() => {
         return editMode === 'single' 
@@ -100,13 +130,13 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, 
     if (!isOpen || !member) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-4" onClick={onClose}>
-            <div ref={modalRef} className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-0 sm:p-4" onClick={onClose}>
+            <div ref={modalRef} className="relative bg-white w-full h-full sm:rounded-2xl shadow-2xl sm:max-w-lg sm:h-auto sm:max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <header className="flex-shrink-0 p-4 border-b border-slate-200 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-slate-800">스케줄 수정</h2>
                     <button onClick={onClose} className="p-1 rounded-full text-slate-400 hover:bg-slate-200" aria-label="닫기"><XMarkIcon className="w-6 h-6" /></button>
                 </header>
-                <main className="p-6 overflow-y-auto">
+                <main className="p-6 overflow-y-auto flex-1">
                     {isConfirmingDelete && (
                         <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-r-lg" role="alert">
                             <div className="flex">
@@ -157,6 +187,20 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, 
                                 </div>
                             )}
                         </fieldset>
+                         {!isConfirmingDelete && memberSessions.length > 0 && (
+                            <div className="pt-4 border-t border-slate-200">
+                                <h3 className="text-sm font-medium text-slate-700 mb-2">{member.name}님 최근 수업 이력</h3>
+                                <ul className="space-y-2 text-xs text-slate-600">
+                                    {memberSessions.map(session => (
+                                        <li key={session.id} className="flex justify-between items-center p-2 bg-slate-50 rounded-md">
+                                            <span>{session.sessionDate}</span>
+                                            <span>{session.classCount}회</span>
+                                            <span className="font-semibold">{formatCurrency((session.unitPrice || 0) * (session.classCount || 0))} 원</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </form>
                 </main>
                  <footer className="flex-shrink-0 p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
@@ -167,7 +211,7 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, 
                                 <button type="button" onClick={() => setIsConfirmingDelete(false)} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-100">취소</button>
                                 <button
                                     type="button"
-                                    onClick={() => onDeleteSchedule(event.id, editMode)}
+                                    onClick={handleConfirmDelete}
                                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
                                 >
                                     <TrashIcon className="w-4 h-4"/>
@@ -177,14 +221,21 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({ isOpen, onClose, 
                         </>
                     ) : (
                         <>
-                            <button
-                                type="button"
-                                onClick={handleDelete}
-                                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                            >
-                                <TrashIcon className="w-4 h-4"/>
-                                삭제
-                            </button>
+                           <div className="flex gap-2">
+                                {event.type === 'workout' && event.status === 'scheduled' && (
+                                    <button type="button" onClick={handleComplete} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-green-600 rounded-md hover:bg-green-100">
+                                        <CheckCircleIcon className="w-4 h-4"/> 완료 처리
+                                    </button>
+                                )}
+                                {event.type === 'workout' && event.status === 'completed' && (
+                                     <button type="button" onClick={handleUncomplete} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-yellow-600 rounded-md hover:bg-yellow-100">
+                                        <ArrowUturnLeftIcon className="w-4 h-4"/> 예정으로
+                                    </button>
+                                )}
+                                <button type="button" onClick={handleDelete} className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 rounded-md hover:bg-red-100">
+                                    <TrashIcon className="w-4 h-4"/> 삭제
+                                </button>
+                            </div>
                             <div className="flex gap-3">
                                 <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-100">취소</button>
                                 <button type="submit" onClick={handleSubmit} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">

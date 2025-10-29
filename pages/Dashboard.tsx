@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
@@ -51,11 +53,11 @@ const Dashboard: React.FC<DashboardProps> = ({ membersWithUsage, forecastEntries
                 lastSessionDate: m.lastSessionDate,
             })), null, 2);
 
-            const totalForecastRevenue = forecastEntries.reduce((acc, entry) => acc + (entry.classCount * entry.unitPrice), 0);
+            const totalForecastRevenue = forecastEntries.reduce((acc, entry) => acc + entry.amount, 0);
 
             const forecastData = JSON.stringify(forecastEntries.map(f => ({
                 item: f.memberName,
-                revenue: f.classCount * f.unitPrice,
+                revenue: f.amount,
             })), null, 2);
 
             const systemInstruction = `
@@ -87,11 +89,8 @@ const Dashboard: React.FC<DashboardProps> = ({ membersWithUsage, forecastEntries
 
         } catch (e: unknown) {
             console.error(e);
-            if (e instanceof Error) {
-                setError(`분석 중 오류가 발생했습니다: ${e.message}`);
-            } else {
-                setError(`분석 중 알 수 없는 오류가 발생했습니다: ${String(e)}`);
-            }
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            setError(`분석 중 오류가 발생했습니다: ${errorMessage}`);
         } finally {
             setLoading(false);
         }

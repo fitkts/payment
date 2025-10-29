@@ -1,3 +1,4 @@
+
 import React, { useMemo, useRef, useEffect } from 'react';
 import type { MemberSession, ToastInfo } from '../types';
 import XMarkIcon from './icons/XMarkIcon';
@@ -129,17 +130,17 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-4"
+      className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-0 sm:p-4"
       aria-modal="true"
       role="dialog"
       onClick={onClose}
     >
       <div
         ref={modalRef}
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col transform transition-all duration-300 ease-out"
+        className="relative bg-white w-full h-full sm:rounded-2xl shadow-2xl sm:max-w-2xl sm:h-auto sm:max-h-[90vh] flex flex-col transform transition-all duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="sticky top-0 bg-white/80 backdrop-blur-sm z-10 p-4 sm:p-6 border-b border-slate-200 flex justify-between items-center">
+        <header className="sticky top-0 bg-white/80 backdrop-blur-sm z-10 p-4 sm:p-6 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl sm:text-2xl font-bold text-slate-800">{memberName}님 수업 상세 내역</h2>
           <button
             onClick={onClose}
@@ -150,7 +151,7 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
           </button>
         </header>
 
-        <div className="p-4 sm:p-6">
+        <main className="p-4 sm:p-6 flex-1 overflow-y-auto">
           <div className="overflow-x-auto bg-white rounded-lg shadow-inner border border-slate-200">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-100">
@@ -172,7 +173,7 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
                     <td className="px-3 py-1.5 whitespace-nowrap">
                       <input
                         type="date"
-                        value={session.sessionDate}
+                        value={session.sessionDate.split('T')[0]}
                         onChange={(e) => handleDateChange(session, e.target.value)}
                         className="w-36 px-2 py-0.5 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-slate-100 text-slate-800 text-sm"
                       />
@@ -191,7 +192,7 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
                       />
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-slate-700 font-semibold">
-                      {(session.unitPrice).toLocaleString()} 원
+                      {(session.unitPrice || 0).toLocaleString()} 원
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -217,8 +218,8 @@ const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ isOpen, onClose
               </tfoot>
             </table>
           </div>
-        </div>
-        <footer className="sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 border-t border-slate-200 flex justify-end">
+        </main>
+        <footer className="sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 border-t border-slate-200 flex justify-end flex-shrink-0">
             <button 
                 onClick={onClose} 
                 className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500"

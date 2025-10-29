@@ -15,14 +15,16 @@ interface ScheduleProps {
     onEditScheduleClick: (event: CalendarEvent) => void;
     handleCompleteDay: (date: string) => void;
     handleCompleteSession: (eventId: string) => void;
+    handleDeleteMultipleSchedules: (eventIds: string[]) => Promise<void>;
+    handleCompleteMultipleSessions: (eventIds: string[]) => Promise<void>;
 }
 
-const Schedule: React.FC<ScheduleProps> = ({ dateRange, onDateRangeChange, events, onAddScheduleClick, onEditScheduleClick, handleCompleteDay, handleCompleteSession }) => {
+const Schedule: React.FC<ScheduleProps> = ({ dateRange, onDateRangeChange, events, onAddScheduleClick, onEditScheduleClick, handleCompleteDay, handleCompleteSession, handleDeleteMultipleSchedules, handleCompleteMultipleSessions }) => {
     const [view, setView] = useState<ViewType>('month');
     const [selectedDate, setSelectedDate] = useState<string>(formatDateISO(new Date()));
 
     const eventsForSelectedDay = useMemo(() => {
-        return events.filter(e => e.date === selectedDate).sort((a,b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00'));
+        return events.filter(e => e.date.split('T')[0] === selectedDate).sort((a,b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00'));
     }, [events, selectedDate]);
     
     // When dateRange changes from filter, if selectedDate is outside the new range, update it to be the start of the new range.
@@ -43,7 +45,7 @@ const Schedule: React.FC<ScheduleProps> = ({ dateRange, onDateRangeChange, event
 
 
     return (
-        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200 space-y-8">
+        <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-lg border border-slate-200 space-y-8">
             <section className="space-y-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-start space-x-4">
@@ -74,8 +76,8 @@ const Schedule: React.FC<ScheduleProps> = ({ dateRange, onDateRangeChange, event
                     onCurrentViewChange={setView}
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
-                    <div className="lg:col-span-7">
+                <div className="grid grid-cols-1 md:grid-cols-10 gap-8">
+                    <div className="md:col-span-7">
                         <Calendar 
                             dateRange={dateRange} 
                             events={events} 
@@ -85,13 +87,15 @@ const Schedule: React.FC<ScheduleProps> = ({ dateRange, onDateRangeChange, event
                             selectedDate={selectedDate}
                         />
                     </div>
-                     <div className="lg:col-span-3">
+                     <div className="md:col-span-3">
                         <DailyScheduleManager
                             date={selectedDate}
                             events={eventsForSelectedDay}
                             onCompleteAll={handleCompleteDay}
                             onCompleteSession={handleCompleteSession}
                             onEditSession={onEditScheduleClick}
+                            onDeleteMultipleSchedules={handleDeleteMultipleSchedules}
+                            onCompleteMultipleSessions={handleCompleteMultipleSessions}
                         />
                     </div>
                 </div>

@@ -344,14 +344,14 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ isOpen, onClose, onAd
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-4"
+      className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center p-0 sm:p-4"
       aria-modal="true"
       role="dialog"
       onClick={onClose}
     >
       <div
         ref={modalRef}
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col transform transition-all duration-300 ease-out"
+        className="relative bg-white w-full h-full sm:rounded-2xl shadow-2xl sm:max-w-xl sm:h-auto sm:max-h-[90vh] flex flex-col transform transition-all duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex-shrink-0 p-4 border-b border-slate-200 flex justify-between items-center">
@@ -367,7 +367,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ isOpen, onClose, onAd
             <XMarkIcon className="w-6 h-6" />
           </button>
         </header>
-        <main className="p-4 overflow-y-auto">
+        <main className="p-4 flex-1 overflow-y-auto">
             {renderContent()}
         </main>
       </div>

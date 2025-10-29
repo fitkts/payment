@@ -89,17 +89,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
+      className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-0 sm:p-4"
       aria-modal="true"
       role="dialog"
       onClick={onClose}
     >
       <div
         ref={modalRef}
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 ease-out"
+        className="relative bg-white w-full h-full sm:rounded-2xl shadow-2xl sm:max-w-md sm:h-auto sm:max-h-[90vh] flex flex-col transform transition-all duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="p-4 border-b border-slate-200 flex justify-between items-center">
+        <header className="p-4 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl font-bold text-slate-800">기본값 설정</h2>
           <button
             onClick={onClose}
@@ -109,7 +109,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
             <XMarkIcon className="w-6 h-6" />
           </button>
         </header>
-        <main className="p-6 space-y-4">
+        <main className="p-6 space-y-4 flex-1 overflow-y-auto">
           <div>
             <label htmlFor="baseSalary" className="block text-sm font-medium text-slate-600 mb-1">
               기본급 (원)
@@ -173,7 +173,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
             </label>
           </div>
         </main>
-        <footer className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+        <footer className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500"

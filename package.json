@@ -1,5 +1,5 @@
 {
-  "name": "copy-of-copy-of-피트니스-ai-애널리틱스-대시보드",
+  "name": "gym비서-모바일",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

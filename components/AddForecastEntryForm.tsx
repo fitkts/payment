@@ -1,21 +1,33 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PlusIcon from './icons/PlusIcon';
 import MemberSearchInput from './MemberSearchInput';
 import type { TrackedMember } from '../types';
 import { formatCurrency, parseCurrency } from '../utils';
 
 interface AddForecastEntryFormProps {
-  onAddEntry: (memberName: string, classCount: number, amount: number) => void;
+  onAddEntry: (memberName: string, classCount: number, amount: number, forecastDate: string) => void;
   trackedMembers: TrackedMember[];
+  selectedDate: Date;
 }
 
-const AddForecastEntryForm: React.FC<AddForecastEntryFormProps> = ({ onAddEntry, trackedMembers }) => {
+const getFirstDayOfSelectedMonth = (date: Date) => {
+    const selectedMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    return selectedMonth.toISOString().split('T')[0];
+};
+
+const AddForecastEntryForm: React.FC<AddForecastEntryFormProps> = ({ onAddEntry, trackedMembers, selectedDate }) => {
   const [memberName, setMemberName] = useState('');
+  const [forecastDate, setForecastDate] = useState(getFirstDayOfSelectedMonth(selectedDate));
   const [classCount, setClassCount] = useState('');
   const [amount, setAmount] = useState('');
 
-  const unitPrice = (parseInt(classCount, 10) || 0) > 0 ? Math.floor(parseCurrency(amount) / parseInt(classCount, 10)) : 0;
+  useEffect(() => {
+    setForecastDate(getFirstDayOfSelectedMonth(selectedDate));
+  }, [selectedDate]);
+
+  const sessionCount = parseInt(classCount, 10) || 0;
+  const totalAmount = parseCurrency(amount);
+  const unitPrice = sessionCount > 0 ? Math.floor(totalAmount / sessionCount) : 0;
 
   const handleMemberSelected = (member: TrackedMember) => {
     setMemberName(member.name);
@@ -25,21 +37,34 @@ const AddForecastEntryForm: React.FC<AddForecastEntryFormProps> = ({ onAddEntry,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!memberName || !classCount || !amount) {
+    if (!forecastDate || !memberName || !classCount || !amount) {
       alert('모든 필드를 입력해주세요.');
       return;
     }
-    onAddEntry(memberName, parseInt(classCount, 10), parseCurrency(amount));
+    onAddEntry(memberName, sessionCount, totalAmount, forecastDate);
     setMemberName('');
     setClassCount('');
     setAmount('');
+    setForecastDate(getFirstDayOfSelectedMonth(selectedDate));
   };
 
   return (
     <div className="mb-6">
       <h2 className="text-xl font-semibold text-slate-700 mb-3">신규 매출 항목 추가</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end bg-slate-50 p-4 rounded-lg border border-slate-200">
-        <div className="col-span-1 md:col-span-1">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end bg-slate-50 p-4 rounded-lg border border-slate-200">
+        <div className="md:col-span-1">
+          <label htmlFor="forecastDate" className="block text-sm font-medium text-slate-600 mb-1">
+            예상 일자
+          </label>
+          <input
+            id="forecastDate"
+            type="date"
+            value={forecastDate}
+            onChange={(e) => setForecastDate(e.target.value)}
+            className="w-full px-2 py-1 text-sm border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+          />
+        </div>
+        <div className="col-span-1 md:col-span-2">
           <label htmlFor="forecastMemberName" className="block text-sm font-medium text-slate-600 mb-1">
             회원명/항목
           </label>

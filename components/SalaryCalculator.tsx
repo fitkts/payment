@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { TAX_RATE } from '../constants';
 import type { MemberSession, TrackedMemberWithStats, ToastInfo, SaleEntry } from '../types';
@@ -15,9 +13,11 @@ import CogIcon from './icons/CogIcon';
 import ChevronUpIcon from './icons/ChevronUpIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import { formatCurrency } from '../utils';
+import ScheduleComparison from './ScheduleComparison';
 
 interface SalaryCalculatorProps {
   sessions: MemberSession[];
+  monthlySales: SaleEntry[];
   allSales: SaleEntry[];
   membersWithStats: TrackedMemberWithStats[];
   onAddSession: (memberId: string, classCount: number, sessionDate: string, unitPrice?: number) => void;
@@ -37,10 +37,15 @@ interface SalaryCalculatorProps {
   salesIncentiveRate: number;
   setSalesIncentiveRate: (value: number) => void;
   onOpenSettings: () => void;
+  plannedMonthlySessions: number;
+  selectedDate: Date;
+  onDateChange: (date: Date) => void;
+  isLoading: boolean;
 }
 
 const SalaryCalculator: React.FC<SalaryCalculatorProps> = ({
   sessions,
+  monthlySales,
   allSales,
   membersWithStats,
   onAddSession,
@@ -60,8 +65,11 @@ const SalaryCalculator: React.FC<SalaryCalculatorProps> = ({
   salesIncentiveRate,
   setSalesIncentiveRate,
   onOpenSettings,
+  plannedMonthlySessions,
+  selectedDate,
+  onDateChange,
+  isLoading,
 }) => {
-    const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<{id: string; name: string} | null>(null);
     const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
     const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
@@ -78,34 +86,20 @@ const SalaryCalculator: React.FC<SalaryCalculatorProps> = ({
 
     const workMonthDate = useMemo(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1), [selectedDate]);
 
-    const filteredSessions = useMemo(() => {
-        const workYear = workMonthDate.getFullYear();
-        const workMonth = workMonthDate.getMonth();
-
-        return sessions.filter(session => {
-            const [sYear, sMonth] = session.sessionDate.split('-').map(Number);
-            return sYear === workYear && (sMonth - 1) === workMonth;
-        });
-    }, [sessions, workMonthDate]);
+    const actualMonthlySessions = useMemo(() => {
+        return sessions.reduce((acc, session) => acc + (session.classCount || 0), 0);
+    }, [sessions]);
 
     const workMonthSalesTotal = useMemo(() => {
-        const workYear = workMonthDate.getFullYear();
-        const workMonth = workMonthDate.getMonth();
-
-        return allSales
-            .filter(sale => {
-                const saleDate = new Date(sale.saleDate);
-                return saleDate.getFullYear() === workYear && saleDate.getMonth() === workMonth;
-            })
-            .reduce((acc, sale) => acc + sale.amount, 0);
-    }, [allSales, workMonthDate]);
+        return monthlySales.reduce((acc, sale) => acc + sale.amount, 0);
+    }, [monthlySales]);
 
     const sessionsForModal = useMemo(() => {
         if (!selectedMemberForDetails) return [];
-        return filteredSessions
+        return sessions
             .filter(s => s.memberId === selectedMemberForDetails.id)
             .sort((a,b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime());
-    }, [filteredSessions, selectedMemberForDetails]);
+    }, [sessions, selectedMemberForDetails]);
 
     const handleAddScannedSessions = (scannedSessions: { memberId: string, sessionDate: string }[]) => {
       let addedCount = 0;
@@ -131,96 +125,112 @@ const SalaryCalculator: React.FC<SalaryCalculatorProps> = ({
               </label>
               <MonthYearPicker
                   selectedDate={selectedDate}
-                  onDateChange={setSelectedDate}
+                  onDateChange={onDateChange}
               />
           </div>
-
-          <div className="mb-6">
-            <div className="border border-slate-200 rounded-lg">
-                <div
-                    className="flex justify-between items-center bg-slate-50 p-4 rounded-t-lg cursor-pointer hover:bg-slate-100 transition-colors"
-                    onClick={() => setIsConfigExpanded(!isConfigExpanded)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsConfigExpanded(!isConfigExpanded); }}
-                    tabIndex={0}
-                    role="button"
-                    aria-expanded={isConfigExpanded}
-                    aria-controls="salary-config-form"
-                >
-                    <div>
-                        <h2 className="text-xl font-semibold text-slate-700">급여 조건 설정</h2>
-                        {!isConfigExpanded && (
-                        <p className="text-sm text-slate-500 mt-1 hidden sm:block">
-                            기본급: {formatCurrency(baseSalary)}, 수업 인센티브: {incentiveRate}%, 매출 인센티브: {salesIncentiveRate}%
-                        </p>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                        onClick={(e) => { e.stopPropagation(); onOpenSettings(); }}
-                        className="p-2 rounded-full text-slate-600 hover:bg-slate-200 focus-visible:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        aria-label="기본값 설정"
-                        title="기본값 설정"
-                        >
-                        <CogIcon className="w-5 h-5" />
-                        </button>
-                        <span className="p-1">
-                        {isConfigExpanded ? <ChevronUpIcon className="w-5 h-5 text-slate-600" /> : <ChevronDownIcon className="w-5 h-5 text-slate-600" />}
-                        </span>
-                    </div>
-                </div>
-
-                <div
-                    id="salary-config-form"
-                    className={`transition-[max-height,padding] duration-500 ease-in-out overflow-hidden ${isConfigExpanded ? 'max-h-96' : 'max-h-0'}`}
-                >
-                    <div className={`bg-slate-50 p-4 border-t border-slate-200 ${!isConfigExpanded ? 'hidden' : ''}`}>
-                        <SalaryConfigForm
-                            baseSalary={baseSalary}
-                            setBaseSalary={setBaseSalary}
-                            incentiveRate={incentiveRate}
-                            setIncentiveRate={setIncentiveRate}
-                            performanceBonus={performanceBonus}
-                            setPerformanceBonus={setPerformanceBonus}
-                            monthlySales={workMonthSalesTotal}
-                            salesIncentiveRate={salesIncentiveRate}
-                            setSalesIncentiveRate={setSalesIncentiveRate}
-                        />
-                    </div>
-                </div>
-            </div>
-          </div>
           
-          <AddSessionForm 
-              onAddSession={onAddSession} 
-              disabled={false} 
-              trackedMembers={membersWithStats}
-              allSales={allSales}
-              selectedDate={selectedDate}
-              onOpenCamera={() => setIsCameraModalOpen(true)}
-              onOpenUploadModal={() => setIsFileUploadModalOpen(true)}
+          <ScheduleComparison 
+            planned={plannedMonthlySessions} 
+            actual={actualMonthlySessions} 
           />
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+                <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="ml-4 text-slate-600">월별 데이터를 불러오는 중입니다...</span>
+            </div>
+           ) : (
+           <>
+              <div className="mb-6">
+                <div className="border border-slate-200 rounded-lg">
+                    <div
+                        className="flex justify-between items-center bg-slate-50 p-4 rounded-t-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                        onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsConfigExpanded(!isConfigExpanded); }}
+                        tabIndex={0}
+                        role="button"
+                        aria-expanded={isConfigExpanded}
+                        aria-controls="salary-config-form"
+                    >
+                        <div>
+                            <h2 className="text-xl font-semibold text-slate-700">급여 조건 설정</h2>
+                            {!isConfigExpanded && (
+                            <p className="text-sm text-slate-500 mt-1 hidden sm:block">
+                                기본급: {formatCurrency(baseSalary)}, 수업 인센티브: {incentiveRate}%, 매출 인센티브: {salesIncentiveRate}%
+                            </p>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                            onClick={(e) => { e.stopPropagation(); onOpenSettings(); }}
+                            className="p-2 rounded-full text-slate-600 hover:bg-slate-200 focus-visible:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            aria-label="기본값 설정"
+                            title="기본값 설정"
+                            >
+                            <CogIcon className="w-5 h-5" />
+                            </button>
+                            <span className="p-1">
+                            {isConfigExpanded ? <ChevronUpIcon className="w-5 h-5 text-slate-600" /> : <ChevronDownIcon className="w-5 h-5 text-slate-600" />}
+                            </span>
+                        </div>
+                    </div>
 
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold text-slate-700 mb-3">수업 세션 목록 (업무 기준)</h2>
-            <SessionTable 
-              sessions={filteredSessions} 
-              onViewDetails={handleViewDetails}
-            />
-          </div>
+                    <div
+                        id="salary-config-form"
+                        className={`transition-[max-height,padding] duration-500 ease-in-out overflow-hidden ${isConfigExpanded ? 'max-h-96' : 'max-h-0'}`}
+                    >
+                        <div className={`bg-slate-50 p-4 border-t border-slate-200 ${!isConfigExpanded ? 'hidden' : ''}`}>
+                            <SalaryConfigForm
+                                baseSalary={baseSalary}
+                                setBaseSalary={setBaseSalary}
+                                incentiveRate={incentiveRate}
+                                setIncentiveRate={setIncentiveRate}
+                                performanceBonus={performanceBonus}
+                                setPerformanceBonus={setPerformanceBonus}
+                                monthlySales={workMonthSalesTotal}
+                                salesIncentiveRate={salesIncentiveRate}
+                                setSalesIncentiveRate={setSalesIncentiveRate}
+                            />
+                        </div>
+                    </div>
+                </div>
+              </div>
+              
+              <AddSessionForm 
+                  onAddSession={onAddSession} 
+                  disabled={false} 
+                  trackedMembers={membersWithStats}
+                  allSales={allSales}
+                  selectedDate={selectedDate}
+                  onOpenCamera={() => setIsCameraModalOpen(true)}
+                  onOpenUploadModal={() => setIsFileUploadModalOpen(true)}
+              />
 
-          <SalarySummary 
-            sessions={filteredSessions}
-            taxRate={TAX_RATE}
-            taxEnabled={taxEnabled}
-            onToggleTax={onToggleTax}
-            insurancesEnabled={insurancesEnabled}
-            onToggleInsurances={onToggleInsurances}
-            baseSalary={baseSalary}
-            incentiveRate={incentiveRate}
-            performanceBonus={performanceBonus}
-            monthlySales={workMonthSalesTotal}
-            salesIncentiveRate={salesIncentiveRate}
-          />
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold text-slate-700 mb-3">수업 세션 목록 (업무 기준)</h2>
+                <SessionTable 
+                  sessions={sessions} 
+                  onViewDetails={handleViewDetails}
+                />
+              </div>
+
+              <SalarySummary 
+                sessions={sessions}
+                taxRate={TAX_RATE}
+                taxEnabled={taxEnabled}
+                onToggleTax={onToggleTax}
+                insurancesEnabled={insurancesEnabled}
+                onToggleInsurances={onToggleInsurances}
+                baseSalary={baseSalary}
+                incentiveRate={incentiveRate}
+                performanceBonus={performanceBonus}
+                monthlySales={workMonthSalesTotal}
+                salesIncentiveRate={salesIncentiveRate}
+              />
+            </>
+          )}
         </div>
         {selectedMemberForDetails && (
             <SessionDetailModal 

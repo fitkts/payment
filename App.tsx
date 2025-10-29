@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFitnessData } from './hooks/useFitnessData';
 import SalaryCalculator from './components/SalaryCalculator';
 import SalesForecast from './pages/SalesForecast';
@@ -6,12 +6,17 @@ import Statistics from './pages/Statistics';
 import Dashboard from './pages/Dashboard';
 import Members from './pages/Members';
 import Schedule from './pages/Schedule';
+import WeeklyTimetable from './pages/WeeklyTimetable'; // New import
 import Toast from './components/Toast';
 import SettingsModal from './components/SettingsModal';
 import AddScheduleModal from './components/AddScheduleModal';
 import EditScheduleModal from './components/EditScheduleModal';
+import BottomNav from './components/new/BottomNav';
+import ChartBarIcon from './components/icons/ChartBarIcon';
+import ChartPieIcon from './components/icons/ChartPieIcon';
+import BanknotesIcon from './components/icons/BanknotesIcon';
 
-type ActiveTab = 'dashboard' | 'calculator' | 'forecast' | 'statistics' | 'members' | 'schedule';
+type ActiveTab = 'dashboard' | 'calculator' | 'forecast' | 'statistics' | 'members' | 'schedule' | 'weekly-timetable' | 'more';
 
 function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -22,14 +27,16 @@ function App() {
     isLoading,
     sessions,
     sales,
+    monthlySessions,
+    monthlySales,
     forecastEntries,
     membersWithStats,
+    weeklySchedules,
+    plannedMonthlySessions,
     toastInfo,
     isSettingsModalOpen,
     isAddScheduleModalOpen,
-    // FIX: Destructure isEditScheduleModalOpen from useFitnessData
     isEditScheduleModalOpen,
-    // FIX: Destructure editingEvent from useFitnessData
     editingEvent,
     scheduleModalContext,
     salaryDefaults,
@@ -42,17 +49,16 @@ function App() {
     statisticsDateRange,
     salaryStatsDateRange,
     scheduleDateRange,
+    salaryDate,
     statisticsData,
     salaryStatisticsData,
-    currentMonthSales,
     membersToReRegister,
+    dormantMembers,
     calendarEvents,
     setToastInfo,
     setIsSettingsModalOpen,
     setIsAddScheduleModalOpen,
-    // FIX: Destructure setIsEditScheduleModalOpen from useFitnessData
     setIsEditScheduleModalOpen,
-    // FIX: Destructure setEditingEvent from useFitnessData
     setEditingEvent,
     setScheduleModalContext,
     setBaseSalary,
@@ -62,6 +68,7 @@ function App() {
     setStatisticsDateRange,
     setSalaryStatsDateRange,
     setScheduleDateRange,
+    setSalaryCalculationMonth,
     handleToggleTax,
     handleToggleInsurances,
     handleSaveSettings,
@@ -77,15 +84,20 @@ function App() {
     handleAddForecastEntry,
     handleDeleteForecastEntry,
     handleUpdateForecastEntry,
+    handleUpdateMemberForecastStatus,
     handleAddSchedule,
-    // FIX: Destructure handleUpdateSchedule from useFitnessData
     handleUpdateSchedule,
-    // FIX: Destructure handleDeleteSchedule from useFitnessData
     handleDeleteSchedule,
     handleCompleteDay,
-    handleCompleteSession
+    handleCompleteSession,
+    handleUncompleteSession,
+    handleAddWeeklySchedule,
+    handleUpdateWeeklySchedule,
+    handleDeleteWeeklySchedule,
+    handleDeleteMultipleSchedules,
+    handleCompleteMultipleSessions,
   } = useFitnessData();
-
+  
   const getTabClass = (tabName: ActiveTab) => {
     return activeTab === tabName
       ? 'bg-blue-600 text-white'
@@ -138,7 +150,8 @@ function App() {
       case 'calculator':
         return (
           <SalaryCalculator
-            sessions={sessions}
+            sessions={monthlySessions}
+            monthlySales={monthlySales}
             allSales={sales}
             membersWithStats={membersWithStats}
             onAddSession={handleAddSession}
@@ -158,21 +171,33 @@ function App() {
             salesIncentiveRate={salesIncentiveRate}
             setSalesIncentiveRate={setSalesIncentiveRate}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
+            plannedMonthlySessions={plannedMonthlySessions}
+            selectedDate={salaryDate}
+            onDateChange={setSalaryCalculationMonth}
+            isLoading={isLoading}
           />
         );
       case 'forecast':
         return (
           <SalesForecast
-            currentMonthSales={currentMonthSales}
+            allSales={sales}
+            allSessions={sessions}
             onAddSale={handleAddSale}
             onDeleteSale={handleDeleteSale}
             onUpdateSale={handleUpdateSale}
+            onUpdateMember={handleUpdateMember}
+            onAddScheduleClick={(memberId) => {
+                setScheduleModalContext({ memberId, date: new Date().toISOString().split('T')[0] });
+                setIsAddScheduleModalOpen(true);
+            }}
             entries={forecastEntries}
             membersToReRegister={membersToReRegister}
+            dormantMembers={dormantMembers}
             trackedMembers={membersWithStats}
             onAddEntry={handleAddForecastEntry}
             onDeleteEntry={handleDeleteForecastEntry}
             onUpdateEntry={handleUpdateForecastEntry}
+            onUpdateMemberForecastStatus={handleUpdateMemberForecastStatus}
           />
         );
        case 'schedule':
@@ -191,6 +216,19 @@ function App() {
             }}
             handleCompleteDay={handleCompleteDay}
             handleCompleteSession={handleCompleteSession}
+            handleDeleteMultipleSchedules={handleDeleteMultipleSchedules}
+            handleCompleteMultipleSessions={handleCompleteMultipleSessions}
+          />
+        );
+      case 'weekly-timetable':
+        return (
+          <WeeklyTimetable
+            weeklySchedules={weeklySchedules}
+            members={membersWithStats}
+            onAdd={handleAddWeeklySchedule}
+            onUpdate={handleUpdateWeeklySchedule}
+            onDelete={handleDeleteWeeklySchedule}
+            plannedMonthlySessions={plannedMonthlySessions}
           />
         );
       case 'statistics':
@@ -222,6 +260,30 @@ function App() {
              }}
           />
         );
+        case 'more':
+            const subTabs = [
+                { id: 'calculator', label: '급여 정산', description: '월간 수업 실적을 바탕으로 급여를 정산합니다.', icon: <BanknotesIcon className="w-6 h-6 text-blue-600" /> },
+                { id: 'forecast', label: '매출 예상', description: '익월 매출을 예측하고 관리합니다.', icon: <ChartBarIcon className="w-6 h-6 text-blue-600" /> },
+                { id: 'statistics', label: '통계', description: '회원 및 급여에 대한 상세 통계를 분석합니다.', icon: <ChartPieIcon className="w-6 h-6 text-blue-600" /> },
+            ];
+            return (
+                <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200 space-y-4">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">더보기</h2>
+                    {subTabs.map(tab => (
+                         <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as ActiveTab)}
+                            className="w-full flex items-center gap-4 p-4 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            {tab.icon}
+                            <div>
+                                <p className="font-semibold text-slate-800 text-left">{tab.label}</p>
+                                <p className="text-sm text-slate-500 text-left">{tab.description}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            );
       default:
         return null;
     }
@@ -259,16 +321,20 @@ function App() {
             members={membersWithStats}
             onUpdateSchedule={handleUpdateSchedule}
             onDeleteSchedule={handleDeleteSchedule}
+            onCompleteSession={handleCompleteSession}
+            onUncompleteSession={handleUncompleteSession}
             calendarEvents={calendarEvents}
+            allSessions={sessions}
           />
       )}
-      <div className="container mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
+      <div className="container mx-auto max-w-5xl p-4 pb-24 md:pb-8">
         <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-slate-900">피트니스 AI 애널리틱스 대시보드</h1>
-          <p className="mt-2 text-lg text-slate-600">급여 정산, 매출 예상, 회원 통계 및 AI 분석을 한번에 관리하세요.</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Gym비서</h1>
+          <p className="mt-2 text-md md:text-lg text-slate-600">급여 정산, 매출 예상, 회원 통계 및 AI 분석을 한번에 관리하세요.</p>
         </header>
 
-        <nav ref={navRef} onKeyDown={handleTabKeyDown} className="mb-8 flex justify-center p-1 bg-slate-200 rounded-xl shadow-inner" role="tablist" aria-label="메인 메뉴">
+        {/* Desktop Navigation */}
+        <nav ref={navRef} onKeyDown={handleTabKeyDown} className="hidden md:flex justify-center p-1 bg-slate-200 rounded-xl shadow-inner mb-8" role="tablist" aria-label="메인 메뉴">
           <button
             ref={el => { tabButtonRefs.current[0] = el; }}
             onClick={() => setActiveTab('dashboard')}
@@ -298,6 +364,15 @@ function App() {
           </button>
           <button
             ref={el => { tabButtonRefs.current[3] = el; }}
+            onClick={() => setActiveTab('weekly-timetable')}
+            className={`flex-1 py-2.5 px-2 text-center font-semibold rounded-lg transition-all duration-300 text-sm md:text-base ${getTabClass('weekly-timetable')}`}
+            role="tab"
+            aria-selected={activeTab === 'weekly-timetable'}
+          >
+            주간 시간표
+          </button>
+          <button
+            ref={el => { tabButtonRefs.current[4] = el; }}
             onClick={() => setActiveTab('calculator')}
             className={`flex-1 py-2.5 px-2 text-center font-semibold rounded-lg transition-all duration-300 text-sm md:text-base ${getTabClass('calculator')}`}
             role="tab"
@@ -306,7 +381,7 @@ function App() {
             급여 정산
           </button>
           <button
-            ref={el => { tabButtonRefs.current[4] = el; }}
+            ref={el => { tabButtonRefs.current[5] = el; }}
             onClick={() => setActiveTab('forecast')}
             className={`flex-1 py-2.5 px-2 text-center font-semibold rounded-lg transition-all duration-300 text-sm md:text-base ${getTabClass('forecast')}`}
             role="tab"
@@ -315,7 +390,7 @@ function App() {
             매출 예상
           </button>
           <button
-            ref={el => { tabButtonRefs.current[5] = el; }}
+            ref={el => { tabButtonRefs.current[6] = el; }}
             onClick={() => setActiveTab('statistics')}
             className={`flex-1 py-2.5 px-2 text-center font-semibold rounded-lg transition-all duration-300 text-sm md:text-base ${getTabClass('statistics')}`}
              role="tab"
@@ -329,10 +404,13 @@ function App() {
           {renderContent()}
         </main>
 
-        <footer className="text-center mt-8 text-sm text-slate-500">
+        <footer className="hidden md:block text-center mt-8 text-sm text-slate-500">
           <p>&copy; {new Date().getFullYear()} Fitness Management System. All rights reserved.</p>
         </footer>
       </div>
+
+      {/* Mobile Navigation */}
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 }

@@ -296,7 +296,7 @@ const MemberStatsTable: React.FC<MemberStatsTableProps> = ({ members, onDeleteMe
                             {isAllSelected ? index + 1 : startIndex + index + 1}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-slate-900">{member.name}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm font-semibold text-slate-700">{member.ltv.toLocaleString()} 원</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-semibold text-slate-700">{(member.ltv || 0).toLocaleString()} 원</td>
                         <td className={`px-4 py-2 whitespace-nowrap text-sm font-medium ${member.remainingSessions < 0 ? 'text-red-600' : 'text-blue-600'}`}>
                             {member.remainingSessions} / {member.cumulativeTotalSessions}
                         </td>

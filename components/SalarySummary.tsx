@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { MemberSession } from '../types';
 import {
@@ -39,7 +38,7 @@ const SalarySummary: React.FC<SalarySummaryProps> = ({
   salesIncentiveRate
 }) => {
   const [isBreakdownVisible, setIsBreakdownVisible] = useState(false);
-  const sessionRevenue = sessions.reduce((acc, session) => acc + session.classCount * session.unitPrice, 0);
+  const sessionRevenue = sessions.reduce((acc, session) => acc + (session.classCount || 0) * (session.unitPrice || 0), 0);
   const sessionIncentive = Math.floor(sessionRevenue * (incentiveRate / 100));
   const salesIncentive = Math.floor(monthlySales * (salesIncentiveRate / 100));
   const totalSalary = baseSalary + sessionIncentive + performanceBonus + salesIncentive;
